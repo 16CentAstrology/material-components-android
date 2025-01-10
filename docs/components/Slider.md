@@ -12,17 +12,17 @@ path: /catalog/sliders/
 [Sliders](https://m3.material.io/components/sliders/) allow users to make
 selections from a range of values.
 
-!["Slider with sound icon buttons on each end."](assets/slider/slider_hero.png)
+!["Slider animation."](assets/slider/slider_hero.gif)
 
 **Contents**
 
-*   [Design & API Documentation](#design-api-documentation)
+*   [Design and API Documentation](#design-and-api-documentation)
 *   [Using sliders](#using-sliders)
 *   [Continuous slider](#continuous-slider)
 *   [Discrete slider](#discrete-slider)
 *   [Theming sliders](#theming-sliders)
 
-## Design & API Documentation
+## Design and API Documentation
 
 *   [Google Material3 Spec](https://material.io/components/sliders/overview)
 *   [API Reference](https://developer.android.com/reference/com/google/android/material/slider/package-summary)
@@ -36,7 +36,8 @@ page.
 
 ### Usage
 
-![2 single point sliders](assets/slider/slider_basic.png)
+<img src="assets/slider/slider_continuous.png" alt="Continuous slider" width="600"/>
+<img src="assets/slider/slider_discrete.png" alt="Discrete slider" width="600"/>
 
 Add a `Slider` to a layout:
 
@@ -79,7 +80,7 @@ API and source code:
     *   [Class definition](https://developer.android.com/reference/com/google/android/material/slider/Slider)
     *   [Class source](https://github.com/material-components/material-components-android/tree/master/lib/java/com/google/android/material/slider/Slider.java)
 
-![2 range sliders](assets/slider/slider_basic_range.png)
+![Range slider](assets/slider/slider_range.png)
 
 A slider with two thumbs is called a range slider.
 Add a `RangeSlider` to a layout:
@@ -182,8 +183,8 @@ indicate magnitude (e.g.: 1.5K, 3M, 12B). That can be achieved through the
 
 The following example shows a slider for a price range in USD currency.
 
-!["Range slider with range of $0 to $100. Left thumb is set at $20, right thumb
-at $70."](assets/slider/slider_price.png)
+<img src="assets/slider/slider_price.png" alt="Range slider with range of $0 to $10. Left thumb is set at $2, right thumb
+at $7." width="400"/>
 
 In code:
 
@@ -210,7 +211,7 @@ a specific value.
 
 The following example shows a continuous slider.
 
-!["Continuous sliders with pressed thumb valued at 20."](assets/slider/slider_cont.png)
+!["Continuous slider."](assets/slider/slider_continuous.png)
 
 In the layout:
 
@@ -229,7 +230,7 @@ In the layout:
 
 The following example shows a continuous range slider.
 
-!["Continuous range slider with left thumb at 20 and right thumb at 70."](assets/slider/slider_cont_range.png)
+!["Continuous range slider."](assets/slider/slider_range.png)
 
 In the layout:
 
@@ -251,7 +252,7 @@ allows a user to input an exact value.
 
 The following example shows a discrete slider.
 
-!["Discrete single point slider with pressed thumb at a value of 20."](assets/slider/slider_disc.png)
+!["Discrete single point slider."](assets/slider/slider_discrete.png)
 
 In the layout:
 
@@ -265,7 +266,7 @@ In the layout:
 
 The following example shows a discrete range slider.
 
-!["Discrete range slider with left thumb at 20 and right thumb at 70."](assets/slider/slider_disc_range.png)
+<img src="assets/slider/slider_discrete_range.png" alt="Discrete range slider." width="400"/>
 
 In the layout:
 
@@ -282,41 +283,66 @@ slider also has tick marks.
 
 ![Slider anatomy diagram](assets/slider/slider_anatomy.png)
 
-1.  Track
-2.  Thumb
-3.  Value label (optional)
-4.  Tick mark (discrete sliders)
+1.  Value label (optional)
+2.  Active track stop indicator
+3.  Active track
+4.  Thumb
+5.  Inactive track
+6.  Inactive track stop indicator
 
 #### Track attributes
 
-Element                                    | Attribute                | Related method(s)                                         | Default value
------------------------------------------- | ------------------------ | --------------------------------------------------------- | -------------
-**Min value**                              | `android:valueFrom`      | `setValueFrom`<br/>`getValueFrom`                         | N/A
-**Max value**                              | `android:valueTo`        | `setValueTo`<br/>`getValueTo`                             | N/A
-**Step size (discrete)**                   | `android:stepSize`       | `setStepSize`<br/>`getStepSize`                           | N/A
-**Initial selected value (Slider)**        | `android:value`          | `setValue`<br/>`getValue`                                 | N/A
-**Initial selected values (RangeSlider)**  | `app:values`             | `setValues`<br/>`getValues`                               | N/A
-**Height**                                 | `app:trackHeight`        | `setTrackHeight`<br/>`getTrackHeight`                     | `4dp`
-**Color**                                  | `app:trackColor`         | `setTrackTintList`<br/>`getTrackTintList`                 | `null`
-**Color for track's active part**          | `app:trackColorActive`   | `setTrackActiveTintList`<br/>`getTrackActiveTintList`     | `?attr/colorPrimary`
-**Color for track's inactive part**        | `app:trackColorInactive` | `setTrackInactiveTintList`<br/>`getTrackInactiveTintList` | `?attr/colorSurfaceContainerHighest`
-**Minimum separation for adjacent thumbs** | `app:minSeparation`      | `setMinSeparation`<br/>`getMinSeparation`                 | `0dp`
+| Element                                    | Attribute                    | Related method(s)                                           | Default value                        |
+|--------------------------------------------|------------------------------|-------------------------------------------------------------|--------------------------------------|
+| **Orientation**                            | `android:orientation`        | `setOrientation`<br/>`isVertical`                           | `horizontal`                         |
+| **Min value**                              | `android:valueFrom`          | `setValueFrom`<br/>`getValueFrom`                           | N/A                                  |
+| **Max value**                              | `android:valueTo`            | `setValueTo`<br/>`getValueTo`                               | N/A                                  |
+| **Step size (discrete)**                   | `android:stepSize`           | `setStepSize`<br/>`getStepSize`                             | N/A                                  |
+| **Initial selected value (Slider)**        | `android:value`              | `setValue`<br/>`getValue`                                   | N/A                                  |
+| **Initial selected values (RangeSlider)**  | `app:values`                 | `setValues`<br/>`getValues`                                 | N/A                                  |
+| **Height**                                 | `app:trackHeight`            | `setTrackHeight`<br/>`getTrackHeight`                       | `16dp`                               |
+| **Color**                                  | `app:trackColor`             | `setTrackTintList`<br/>`getTrackTintList`                   | `null`                               |
+| **Color for track's active part**          | `app:trackColorActive`       | `setTrackActiveTintList`<br/>`getTrackActiveTintList`       | `?attr/colorPrimary`                 |
+| **Color for track's inactive part**        | `app:trackColorInactive`     | `setTrackInactiveTintList`<br/>`getTrackInactiveTintList`   | `?attr/colorSurfaceContainerHighest` |
+| **Corner size**                            | `app:trackCornerSize`        | `setTrackCornerSize`<br/>`getTrackCornerSize`               | `trackHeight / 2`                    |
+| **Inside corner size**                     | `app:trackInsideCornerSize`  | `setTrackInsideCornerSize`<br/>`getTrackInsideCornerSize`   | `2dp`                                |
+| **Stop indicator size**                    | `app:trackStopIndicatorSize` | `setTrackStopIndicatorSize`<br/>`getTrackStopIndicatorSize` | `4dp`                                |
+| **Minimum separation for adjacent thumbs** | `app:minSeparation`          | `setMinSeparation`<br/>`getMinSeparation`                   | `0dp`                                |
+| **Active start icon**                      | `app:trackIconActiveStart`   | `setTrackIconActiveStart`<br/>`getTrackIconActiveStart`     | `null`                               |
+| **Active end icon**                        | `app:trackIconActiveEnd`     | `setTrackIconActiveEnd`<br/>`getTrackIconActiveEnd`         | `null`                               |
+| **Active icon color**                      | `app:trackIconActiveColor`   | `setTrackIconActiveColor`<br/>`getTrackIconActiveColor`     | N/A                                  |
+| **Inactive start icon**                    | `app:trackIconInactiveStart` | `setTrackIconInactiveStart`<br/>`getTrackIconInactiveStart` | `null`                               |
+| **Inactive end icon**                      | `app:trackIconInactiveEnd`   | `setTrackIconInactiveEnd`<br/>`getTrackIconInactiveEnd`     | `null`                               |
+| **Inactive icon color**                    | `app:trackIconInactiveColor` | `setTrackIconInactiveColor`<br/>`getTrackIconInactiveColor` | N/A                                  |
+| **Icon size**                              | `app:trackIconSize`          | `setTrackIconSize`<br/>`getTrackIconSize`                   | N/A                                  |
 
 **Note:** `app:trackColor` takes precedence over `app:trackColorActive` and
 `app:trackColorInative`. It's a shorthand for setting both values to the same
 thing.
 
+**Note:** `app:trackStopIndicatorSize` takes precedence over
+`app:tickRadiusActive` and `app:tickRadiusInactive`.
+
+**Note:** `vertical` orientation still uses `height` in the same way as for
+`horizontal` orientation. In this context, `height` can be seen as track
+thickness.
+
 #### Thumb attributes
 
-Element          | Attribute              | Related method(s)                                                                 | Default value
----------------- | ---------------------- | --------------------------------------------------------------------------------- | -------------
-**Color**        | `app:thumbColor`       | `setThumbTintList`<br/>`getThumbTintList`                                         | `?attr/colorPrimary`
-**Radius**       | `app:thumbRadius`      | `setThumbRadiusResource`<br/>`setThumbRadius`<br/>`getThumbRadius`                | `10dp`
-**Elevation**    | `app:thumbElevation`   | `setThumbElevationResource`<br/>`setThumbElevation`<br/>`getThumbElevation`       | `2dp`
-**Halo color**   | `app:haloColor`        | `setHaloTintList`<br/>`getHaloTintList`                                           | `?attr/colorPrimary` at 24%
-**Halo radius**  | `app:haloRadius`       | `setHaloRadiusResource`<br/>`setHaloRadius`<br/>`getHaloRadius`                   | `24dp`
-**Stroke color** | `app:thumbStrokeColor` | `setThumbStrokeColor`<br/>`setThumbStrokeColorResource`<br/>`getThumbStrokeColor` | `null`
-**Stroke width** | `app:thumbStrokeWidth` | `setThumbStrokeWidth`<br/>`setThumbStrokeWidthResource`<br/>`getThumbStrokeWidth` | `0dp`
+| Element          | Attribute               | Related method(s)                                                                 | Default value                |
+|------------------|-------------------------|-----------------------------------------------------------------------------------|------------------------------|
+| **Color**        | `app:thumbColor`        | `setThumbTintList`<br/>`getThumbTintList`                                         | `?attr/colorPrimary`         |
+| **Width**        | `app:thumbWidth`        | `setThumbWidth`<br/>`setThumbWidthResource`<br/>`getThumbWidth`                   | `4dp`                        |
+| **Height**       | `app:thumbHeight`       | `setThumbHeight`<br/>`setThumbHeightResource`<br/>`getThumbHeight`                | `44dp`                       |
+| **Radius**       | `app:thumbRadius`       | `setThumbRadiusResource`<br/>`setThumbRadius`<br/>`getThumbRadius`                | N/A                          |
+| **Elevation**    | `app:thumbElevation`    | `setThumbElevationResource`<br/>`setThumbElevation`<br/>`getThumbElevation`       | `2dp`                        |
+| **Halo color**   | `app:haloColor`         | `setHaloTintList`<br/>`getHaloTintList`                                           | `@android:color/transparent` |
+| **Halo radius**  | `app:haloRadius`        | `setHaloRadiusResource`<br/>`setHaloRadius`<br/>`getHaloRadius`                   | N/A                          |
+| **Stroke color** | `app:thumbStrokeColor`  | `setThumbStrokeColor`<br/>`setThumbStrokeColorResource`<br/>`getThumbStrokeColor` | `null`                       |
+| **Stroke width** | `app:thumbStrokeWidth`  | `setThumbStrokeWidth`<br/>`setThumbStrokeWidthResource`<br/>`getThumbStrokeWidth` | `0dp`                        |
+| **Gap size**     | `app:thumbTrackGapSize` | `setThumbTrackGapSize`<br/>`getThumbTrackGapSize`                                 | `6dp`                        |
+
+**Note:** `app:thumbWidth` and `app:thumbHeight` take precedence over `app:thumbRadius`.
 
 #### Value label attributes
 
@@ -331,14 +357,14 @@ Element       | Attribute           | Related method(s)                         
 
 #### Tick mark attributes
 
-Element                             | Attribute                | Related method(s)                                       | Default value
------------------------------------ | ------------------------ | ------------------------------------------------------- | -------------
-**Color**                           | `app:tickColor`          | `setTickTintList`<br/>`getTickTintList`                 | `null`
-**Color for tick's active part**    | `app:tickColorActive`    | `setTickActiveTintList`<br/>`getTickActiveTintList`     | `?attr/colorSurfaceVariant`
-**Color for tick's inactive part**  | `app:tickColorInactive`  | `setTickInactiveTintList`<br/>`getTickInactiveTintList` | `?attr/colorPrimary`
-**Radius for tick's active part**   | `app:tickRadiusActive`   | `setTickActiveRadius`<br/>`getTickActiveRadius`         | `1dp`
-**Radius for tick's inactive part** | `app:tickRadiusInactive` | `setTickInactiveRadius`<br/>`getTickInactiveRadius`     | `1dp`
-**Tick visible**                    | `app:tickVisible`        | `setTickVisible`<br/>`isTickVisible()`                  | `true`
+| Element                             | Attribute                | Related method(s)                                       | Default value                        |
+|-------------------------------------|--------------------------|---------------------------------------------------------|--------------------------------------|
+| **Color**                           | `app:tickColor`          | `setTickTintList`<br/>`getTickTintList`                 | `null`                               |
+| **Color for tick's active part**    | `app:tickColorActive`    | `setTickActiveTintList`<br/>`getTickActiveTintList`     | `?attr/colorSurfaceContainerHighest` |
+| **Color for tick's inactive part**  | `app:tickColorInactive`  | `setTickInactiveTintList`<br/>`getTickInactiveTintList` | `?attr/colorPrimary`                 |
+| **Radius for tick's active part**   | `app:tickRadiusActive`   | `setTickActiveRadius`<br/>`getTickActiveRadius`         | `null` (1/2 trackStopIndicatorSize)  |
+| **Radius for tick's inactive part** | `app:tickRadiusInactive` | `setTickInactiveRadius`<br/>`getTickInactiveRadius`     | `null` (1/2 trackStopIndicatorSize)  |
+| **Tick visible**                    | `app:tickVisible`        | `setTickVisible`<br/>`isTickVisible()`                  | `true`                               |
 
 **Note:** `app:tickColor` takes precedence over `app:tickColorActive` and
 `app:tickColorInative`. It's a shorthand for setting both values to the same
@@ -356,6 +382,23 @@ See the full list of
 [styles](https://github.com/material-components/material-components-android/tree/master/lib/java/com/google/android/material/slider/res/values/styles.xml)
 and
 [attributes](https://github.com/material-components/material-components-android/tree/master/lib/java/com/google/android/material/slider/res/values/attrs.xml).
+
+#### Non-Text Contrast update
+
+In order to comply with the latest accessibility requirements, the
+`Slider` has been updated with additional attributes:
+
+- `app:thumbTrackGapSize`: size of the gap between the thumb and the
+  track, 6dp by default.
+- `app:trackInsideCornerSize`: size of the corners towards the thumb when a gap
+  is present, 2dp by default.
+- `app:trackStopIndicatorSize`: size of the stop at the start/end of the track,
+  4dp by default.
+
+`*.Legacy` styles have been added to revert to the previous behavior (**not
+recommended**):
+
+- `Widget.Material3.Slider.Legacy`
 
 ## Theming sliders
 
@@ -401,7 +444,7 @@ all sliders but does not affect other components:
     <item name="sliderStyle">@style/Widget.App.Slider</item>
 </style>
 
-<style name="Widget.App.Slider" parent="Widget.Material3.Slider">
+<style name="Widget.App.Slider" parent="Widget.Material3.Slider.Legacy">
     <item name="materialThemeOverlay">@style/ThemeOverlay.App.Slider</item>
     <item name="labelStyle">@style/Widget.App.Tooltip</item>
   </style>

@@ -37,13 +37,14 @@ import com.google.android.material.carousel.HeroCarouselStrategy;
 import com.google.android.material.divider.MaterialDividerItemDecoration;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.slider.Slider;
-import com.google.android.material.slider.Slider.OnSliderTouchListener;
 import io.material.catalog.feature.DemoFragment;
 
 /** A fragment that displays the hero variant of the Carousel. */
 public class HeroCarouselDemoFragment extends DemoFragment {
 
   private MaterialDividerItemDecoration horizontalDivider;
+  private CarouselAdapter adapter;
+  private Slider positionSlider;
 
   @NonNull
   @Override
@@ -68,13 +69,12 @@ public class HeroCarouselDemoFragment extends DemoFragment {
     MaterialSwitch drawDividers = view.findViewById(R.id.draw_dividers_switch);
     MaterialSwitch enableFlingSwitch = view.findViewById(R.id.enable_fling_switch);
     AutoCompleteTextView itemCountDropdown = view.findViewById(R.id.item_count_dropdown);
-    Slider positionSlider = view.findViewById(R.id.position_slider);
+    positionSlider = view.findViewById(R.id.position_slider);
     RadioButton startAlignButton = view.findViewById(R.id.start_align);
     RadioButton centerAlignButton = view.findViewById(R.id.center_align);
 
     // A hero carousel
-    RecyclerView heroStartRecyclerView =
-        view.findViewById(R.id.hero_start_carousel_recycler_view);
+    RecyclerView heroStartRecyclerView = view.findViewById(R.id.hero_start_carousel_recycler_view);
     CarouselLayoutManager heroStartCarouselLayoutManager =
         new CarouselLayoutManager(new HeroCarouselStrategy());
     heroStartCarouselLayoutManager.setDebuggingEnabled(
@@ -86,8 +86,7 @@ public class HeroCarouselDemoFragment extends DemoFragment {
         (buttonView, isChecked) -> {
           heroStartRecyclerView.setBackgroundResource(
               isChecked ? R.drawable.dashed_outline_rectangle : 0);
-          heroStartCarouselLayoutManager.setDebuggingEnabled(
-              heroStartRecyclerView, isChecked);
+          heroStartCarouselLayoutManager.setDebuggingEnabled(heroStartRecyclerView, isChecked);
         });
 
     drawDividers.setOnCheckedChangeListener(
@@ -99,7 +98,7 @@ public class HeroCarouselDemoFragment extends DemoFragment {
           }
         });
 
-    CarouselAdapter adapter =
+    adapter =
         new CarouselAdapter(
             (item, position) -> {
               heroStartRecyclerView.scrollToPosition(position);
@@ -107,25 +106,7 @@ public class HeroCarouselDemoFragment extends DemoFragment {
             },
             R.layout.cat_carousel_item);
     heroStartRecyclerView.addOnScrollListener(
-        new RecyclerView.OnScrollListener() {
-          private boolean dragged = false;
-
-          @Override
-          public void onScrollStateChanged(@NonNull RecyclerView recyclerView, int newState) {
-            if (newState == RecyclerView.SCROLL_STATE_DRAGGING) {
-              dragged = true;
-            } else if (dragged && newState == RecyclerView.SCROLL_STATE_IDLE) {
-              if (recyclerView.computeHorizontalScrollRange() != 0) {
-                positionSlider.setValue(
-                    (adapter.getItemCount() - 1)
-                            * recyclerView.computeHorizontalScrollOffset()
-                            / recyclerView.computeHorizontalScrollRange()
-                        + 1);
-              }
-              dragged = false;
-            }
-          }
-        });
+        CarouselDemoUtils.createUpdateSliderOnScrollListener(positionSlider, adapter));
 
     SnapHelper disableFlingSnapHelper = new CarouselSnapHelper();
     SnapHelper enableFlingSnapHelper = new CarouselSnapHelper(false);
@@ -154,15 +135,7 @@ public class HeroCarouselDemoFragment extends DemoFragment {
                 updateSliderRange(positionSlider, adapter)));
 
     positionSlider.addOnSliderTouchListener(
-        new OnSliderTouchListener() {
-          @Override
-          public void onStartTrackingTouch(@NonNull Slider slider) {}
-
-          @Override
-          public void onStopTrackingTouch(@NonNull Slider slider) {
-            heroStartRecyclerView.smoothScrollToPosition(((int) slider.getValue()) - 1);
-          }
-        });
+        CarouselDemoUtils.createScrollToPositionSliderTouchListener(heroStartRecyclerView));
 
     startAlignButton.setOnClickListener(
         v -> heroStartCarouselLayoutManager.setCarouselAlignment(ALIGNMENT_START));
@@ -170,6 +143,11 @@ public class HeroCarouselDemoFragment extends DemoFragment {
         v -> heroStartCarouselLayoutManager.setCarouselAlignment(ALIGNMENT_CENTER));
 
     heroStartRecyclerView.setAdapter(adapter);
+  }
+
+  @Override
+  public void onStart() {
+    super.onStart();
     adapter.submitList(CarouselData.createItems(), updateSliderRange(positionSlider, adapter));
   }
 

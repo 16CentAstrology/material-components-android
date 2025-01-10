@@ -16,10 +16,11 @@
 
 package com.google.android.material.drawable;
 
+import com.google.android.material.R;
+
 import static java.lang.Math.max;
 
 import android.annotation.SuppressLint;
-import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.content.res.Resources.NotFoundException;
@@ -29,6 +30,8 @@ import android.graphics.Path;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuff.Mode;
 import android.graphics.PorterDuffColorFilter;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.ColorStateListDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.LayerDrawable;
 import android.graphics.drawable.RippleDrawable;
@@ -39,9 +42,11 @@ import android.util.AttributeSet;
 import android.util.Xml;
 import android.view.Gravity;
 import androidx.annotation.ColorInt;
+import androidx.annotation.DoNotInline;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.Px;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.RestrictTo.Scope;
 import androidx.annotation.XmlRes;
@@ -144,7 +149,6 @@ public final class DrawableUtils {
     }
   }
 
-  @TargetApi(VERSION_CODES.LOLLIPOP)
   public static void setRippleDrawableRadius(@Nullable RippleDrawable drawable, int radius) {
     if (VERSION.SDK_INT >= VERSION_CODES.M) {
       drawable.setRadius(radius);
@@ -252,6 +256,8 @@ public final class DrawableUtils {
       return bottomLayerDrawable;
     }
 
+    boolean shouldScaleTopLayer =
+        topLayerDesiredWidth != INTRINSIC_SIZE && topLayerDesiredHeight != INTRINSIC_SIZE;
     if (topLayerDesiredWidth == INTRINSIC_SIZE) {
       topLayerDesiredWidth = getTopLayerIntrinsicWidth(bottomLayerDrawable, topLayerDrawable);
     }
@@ -292,11 +298,11 @@ public final class DrawableUtils {
       drawable.setLayerSize(1, topLayerNewWidth, topLayerNewHeight);
       drawable.setLayerGravity(1, Gravity.CENTER);
     } else {
-      Drawable scaledTopLayerDrawable =
-          new ScaledDrawableWrapper(topLayerDrawable, topLayerNewWidth, topLayerNewHeight)
-              .getDrawable();
-
-      drawable = new LayerDrawable(new Drawable[] {bottomLayerDrawable, scaledTopLayerDrawable});
+      if (shouldScaleTopLayer) {
+        topLayerDrawable =
+            new ScaledDrawableWrapper(topLayerDrawable, topLayerNewWidth, topLayerNewHeight);
+      }
+      drawable = new LayerDrawable(new Drawable[] {bottomLayerDrawable, topLayerDrawable});
 
       final int horizontalInset =
           max((bottomLayerDrawable.getIntrinsicWidth() - topLayerNewWidth) / 2, 0);
@@ -355,17 +361,62 @@ public final class DrawableUtils {
   /** Sets the Outline to a {@link android.graphics.Path path}, if possible. */
   public static void setOutlineToPath(@NonNull final Outline outline, @NonNull final Path path) {
     if (VERSION.SDK_INT >= VERSION_CODES.R) {
-      outline.setPath(path);
+      OutlineCompatR.setPath(outline, path);
     } else if (VERSION.SDK_INT >= VERSION_CODES.Q) {
       try {
         // As of Android Q, the restriction that the path must be convex is removed, but the API is
         // misnamed until the introduction of setPath() in R, so we have to use setConvexPath for Q.
-        outline.setConvexPath(path);
+        OutlineCompatL.setConvexPath(outline, path);
       } catch (IllegalArgumentException ignored) {
         // The change to support concave paths was done late in the release cycle. People
         // using pre-releases of Q would experience a crash here.
       }
-    } else if (VERSION.SDK_INT >= VERSION_CODES.LOLLIPOP && path.isConvex()) {
+    } else if (path.isConvex()) {
+      OutlineCompatL.setConvexPath(outline, path);
+    }
+  }
+
+  /**
+   * Returns the {@link ColorStateList} if it can be retrieved from the {@code drawable}, or null
+   * otherwise.
+   *
+   * <p>In particular:
+   *
+   * <ul>
+   *   <li>If the {@code drawable} is a {@link ColorStateListDrawable}, the method will return the
+   *       {@code drawable}'s {@link ColorStateList}.
+   *   <li>If the {@code drawable} is a {@link ColorDrawable}, the method will return a {@link
+   *       ColorStateList} containing the {@code drawable}'s color.
+   * </ul>
+   */
+  @Nullable
+  public static ColorStateList getColorStateListOrNull(@Nullable final Drawable drawable) {
+    if (drawable instanceof ColorDrawable) {
+      return ColorStateList.valueOf(((ColorDrawable) drawable).getColor());
+    }
+
+    if (VERSION.SDK_INT >= VERSION_CODES.Q) {
+      if (drawable instanceof ColorStateListDrawable) {
+        return ((ColorStateListDrawable) drawable).getColorStateList();
+      }
+    }
+
+    return null;
+  }
+
+  @RequiresApi(VERSION_CODES.R)
+  private static class OutlineCompatR {
+    // Avoid class verification failures on older Android versions.
+    @DoNotInline
+    static void setPath(@NonNull Outline outline, @NonNull Path path) {
+      outline.setPath(path);
+    }
+  }
+
+  private static class OutlineCompatL {
+    // Avoid class verification failures on older Android versions.
+    @DoNotInline
+    static void setConvexPath(@NonNull Outline outline, @NonNull Path path) {
       outline.setConvexPath(path);
     }
   }

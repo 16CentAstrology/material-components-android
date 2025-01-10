@@ -27,6 +27,7 @@ import android.view.ViewGroup;
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.drawerlayout.widget.DrawerLayout.SimpleDrawerListener;
 import com.google.android.material.materialswitch.MaterialSwitch;
@@ -45,6 +46,7 @@ public class NavigationDrawerDemoActivity extends DemoActivity {
       };
 
   private DrawerLayout drawerLayout;
+  private MaterialSwitch autoCloseSwitch;
 
   @NonNull
   @Override
@@ -90,12 +92,20 @@ public class NavigationDrawerDemoActivity extends DemoActivity {
     view.findViewById(R.id.show_end_drawer_gravity)
         .setOnClickListener(v -> drawerLayout.openDrawer(navigationViewEnd));
 
-    MaterialSwitch materialSwitch = view.findViewById(R.id.bold_text_switch);
-    materialSwitch.setChecked(true);
-    materialSwitch.setOnCheckedChangeListener(
+    MaterialSwitch boldTextSwitch = view.findViewById(R.id.bold_text_switch);
+    boldTextSwitch.setOnCheckedChangeListener(
         (buttonView, isChecked) -> {
           navigationViewStart.setItemTextAppearanceActiveBoldEnabled(isChecked);
           navigationViewEnd.setItemTextAppearanceActiveBoldEnabled(isChecked);
+        });
+    autoCloseSwitch = view.findViewById(R.id.auto_close_switch);
+
+    drawerLayout.post(
+        () -> {
+          if (drawerLayout.isDrawerOpen(GravityCompat.START)
+              || drawerLayout.isDrawerOpen(GravityCompat.END)) {
+            drawerOnBackPressedCallback.setEnabled(true);
+          }
         });
 
     return view;
@@ -106,7 +116,9 @@ public class NavigationDrawerDemoActivity extends DemoActivity {
     navigationView.setNavigationItemSelectedListener(
         menuItem -> {
           navigationView.setCheckedItem(menuItem);
-          drawerLayout.closeDrawer(navigationView);
+          if (autoCloseSwitch.isChecked()) {
+            drawerLayout.closeDrawer(navigationView);
+          }
           return true;
         });
   }

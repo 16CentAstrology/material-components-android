@@ -5,31 +5,30 @@ dependencies {
   // Align kotlin versions
   implementation(platform("org.jetbrains.kotlin:kotlin-bom:1.8.22"))
 
-  api 'com.google.dagger:dagger:2.47'
-  annotationProcessor 'com.google.dagger:dagger-compiler:2.47'
+  api 'com.google.dagger:dagger:2.51.1'
+  annotationProcessor 'com.google.dagger:dagger-compiler:2.51.1'
 
-  api 'com.google.dagger:dagger-android:2.47'
-  api 'com.google.dagger:dagger-android-support:2.47'
-  annotationProcessor 'com.google.dagger:dagger-android-processor:2.47'
+  api 'com.google.dagger:dagger-android:2.51.1'
+  api 'com.google.dagger:dagger-android-support:2.51.1'
+  annotationProcessor 'com.google.dagger:dagger-android-processor:2.51.1'
 
   api 'androidx.multidex:multidex:2.0.1'
   api 'androidx.constraintlayout:constraintlayout:2.1.0'
   api 'androidx.gridlayout:gridlayout:1.0.0'
   api "androidx.multidex:multidex:2.0.1"
-  api "androidx.activity:activity:1.8.0-alpha06"
   api "androidx.recyclerview:recyclerview:1.2.1"
   api 'androidx.window:window:1.0.0-beta04'
   api "androidx.window:window-java:1.0.0-beta04"
   api "androidx.preference:preference:1.1.1"
 
-  api 'com.google.guava:guava:32.1.1-android'
+  api 'com.google.guava:guava:33.3.1-android'
   modules {
     module("com.google.guava:listenablefuture") {
       replacedBy("com.google.guava:guava", "listenablefuture is part of guava")
     }
   }
 
-  api 'com.github.bumptech.glide:glide:4.15.1'
+  api 'com.github.bumptech.glide:glide:4.16.0'
 
   api project(':lib')
 
@@ -76,8 +75,10 @@ def srcDirs = [
   'imageview',
   'fab',
   'feature',
+  'floatingtoolbar',
   'font',
   'internal',
+  'loadingindicator',
   'main',
   'materialswitch',
   'menu',
@@ -112,7 +113,7 @@ android {
     testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     vectorDrawables.useSupportLibrary = true
     multiDexEnabled true
-    minSdkVersion 14
+    minSdkVersion 21
     targetSdkVersion 33
   }
 

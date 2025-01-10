@@ -20,6 +20,9 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.RestrictTo;
+import androidx.annotation.RestrictTo.Scope;
 import androidx.core.math.MathUtils;
 
 /**
@@ -27,7 +30,8 @@ import androidx.core.math.MathUtils;
  * an arrangement to fit within an available space, and can assess the arrangement's
  * desirability according to a priority heuristic.
  */
-final class Arrangement {
+@RestrictTo(Scope.LIBRARY_GROUP)
+public final class Arrangement {
 
   // Specifies a percentage of a medium item's size by which it can be increased or decreased to
   // help fit an arrangement into the carousel's available space.
@@ -35,8 +39,8 @@ final class Arrangement {
 
   final int priority;
   float smallSize;
-  final int smallCount;
-  final int mediumCount;
+  int smallCount;
+  int mediumCount;
   float mediumSize;
   float largeSize;
   final int largeCount;
@@ -64,7 +68,7 @@ final class Arrangement {
    * @param largeCount the number of large items in this arrangement
    * @param availableSpace the space this arrangement needs to fit within
    */
-  Arrangement(
+  public Arrangement(
       int priority,
       float targetSmallSize,
       float minSmallSize,
@@ -140,6 +144,8 @@ final class Arrangement {
       smallSize += max(delta / smallCount, minSmallSize - smallSize);
     }
 
+    // Zero out small size if there are no small items
+    smallSize = smallCount > 0 ? smallSize : 0F;
     largeSize =
         calculateLargeSize(availableSpace, smallCount, smallSize, mediumCount, largeCount);
     mediumSize = (largeSize + smallSize) / 2F;
@@ -235,16 +241,17 @@ final class Arrangement {
    * @return the arrangement that is considered the most desirable and has been adjusted to fit
    *     within the available space
    */
-  static Arrangement findLowestCostArrangement(
+  @Nullable
+  public static Arrangement findLowestCostArrangement(
       float availableSpace,
       float targetSmallSize,
       float minSmallSize,
       float maxSmallSize,
-      int[] smallCounts,
+      @NonNull int[] smallCounts,
       float targetMediumSize,
-      int[] mediumCounts,
+      @NonNull int[] mediumCounts,
       float targetLargeSize,
-      int[] largeCounts) {
+      @NonNull int[] largeCounts) {
     Arrangement lowestCostArrangement = null;
     int priority = 1;
     for (int largeCount : largeCounts) {
@@ -277,5 +284,9 @@ final class Arrangement {
       }
     }
     return lowestCostArrangement;
+  }
+
+  int getItemCount() {
+    return smallCount + mediumCount + largeCount;
   }
 }

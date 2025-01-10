@@ -16,30 +16,34 @@
 
 package com.google.android.material.progressindicator;
 
+import static androidx.core.math.MathUtils.clamp;
+
 import android.animation.Animator;
 import android.graphics.drawable.Drawable;
 import androidx.annotation.NonNull;
+import androidx.annotation.VisibleForTesting;
 import androidx.vectordrawable.graphics.drawable.Animatable2Compat.AnimationCallback;
+import com.google.android.material.progressindicator.DrawingDelegate.ActiveIndicator;
+import java.util.ArrayList;
+import java.util.List;
 
 /** A delegate abstract class for animating properties used in drawing the graphics. */
 abstract class IndeterminateAnimatorDelegate<T extends Animator> {
 
   // The drawable associated with this delegate.
   protected IndeterminateDrawable drawable;
-  // A float array of numbers in [0, 1] representing the positions of ends of each segment on the
-  // track.
-  protected final float[] segmentPositions;
-  // An integer array of displayed colors used for each indicator segment defined by every two
-  // segment positions.
-  protected final int[] segmentColors;
+
+  protected final List<ActiveIndicator> activeIndicators;
 
   /**
    * This constructor should be overridden with other necessary actions, e.g. instantiating the
    * animator.
    */
-  protected IndeterminateAnimatorDelegate(int segmentCount) {
-    this.segmentPositions = new float[segmentCount * 2];
-    this.segmentColors = new int[segmentCount];
+  protected IndeterminateAnimatorDelegate(int indicatorCount) {
+    activeIndicators = new ArrayList<>();
+    for (int i = 0; i < indicatorCount; i++) {
+      activeIndicators.add(new ActiveIndicator());
+    }
   }
 
   /** Registers the drawable associated to this delegate. */
@@ -48,7 +52,8 @@ abstract class IndeterminateAnimatorDelegate<T extends Animator> {
   }
 
   protected float getFractionInRange(int playtime, int start, int duration) {
-    return (float) (playtime - start) / duration;
+    float fraction = (float) (playtime - start) / duration;
+    return clamp(fraction, 0f, 1f);
   }
 
   /** Starts the animator. */
@@ -62,7 +67,7 @@ abstract class IndeterminateAnimatorDelegate<T extends Animator> {
 
   /**
    * Invalidates the spec values used by the animator delegate. When the spec values are changed in
-   * indicator class, values assigned to animators or segments don't get updated until they are
+   * indicator class, values assigned to animators or indicators don't get updated until they are
    * explicitly reset. Call this to apply the changes immediately.
    */
   public abstract void invalidateSpecValues();
@@ -82,4 +87,10 @@ abstract class IndeterminateAnimatorDelegate<T extends Animator> {
    * animation cycle.
    */
   public abstract void unregisterAnimatorsCompleteCallback();
+
+  @VisibleForTesting
+  abstract void setAnimationFraction(float fraction);
+
+  @VisibleForTesting
+  abstract void resetPropertiesForNewStart();
 }

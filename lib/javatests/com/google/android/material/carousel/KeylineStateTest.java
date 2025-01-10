@@ -113,18 +113,22 @@ public final class KeylineStateTest {
     // Extra small items are 10F, Small items are 50F, large items are 100F
     KeylineState keylineState =
         new KeylineState.Builder(100F, recyclerWidth)
-            .addKeyline(-5F, getKeylineMaskPercentage(10F, 100F), 10F)
+            // left edge of xSmall item is -10 from left edge of carousel container
+            .addKeyline(-5F, getKeylineMaskPercentage(10F, 100F), 10F, false, true)
             .addKeyline(50F, 0F, 100F, true)
             .addKeyline(125F, getKeylineMaskPercentage(50F, 100F), 50F)
-            .addKeyline(155F, getKeylineMaskPercentage(10F, 100F), 10F)
+            // right edge of xSmall item is 60 from right edge of carousel container
+            .addKeyline(155F, getKeylineMaskPercentage(10F, 100F), 10F, false, true)
             .build();
 
     KeylineState expectedState =
         new KeylineState.Builder(100F, recyclerWidth)
-            .addKeyline(-5F, getKeylineMaskPercentage(10F, 100F), 10F)
-            .addKeyline(25F, getKeylineMaskPercentage(50, 100F), 50F)
-            .addKeyline(100F, 0F, 100F, true)
-            .addKeyline(155F, getKeylineMaskPercentage(10F, 100F), 10F)
+            // left edge of xSmall item is -60 from left of carousel container
+            .addKeyline(-55F, getKeylineMaskPercentage(10F, 100F), 10F, false, true)
+            .addKeyline(-25F, getKeylineMaskPercentage(50, 100F), 50F)
+            .addKeyline(50F, 0F, 100F, true)
+            // right edge of xSmall item is 10 from right of carousel container
+            .addKeyline(105F, getKeylineMaskPercentage(10F, 100F), 10F, false, true)
             .build();
     KeylineState reversedState = KeylineState.reverse(keylineState, recyclerWidth);
 
@@ -281,6 +285,20 @@ public final class KeylineStateTest {
             new KeylineState.Builder(100F, 0)
                 .addKeyline(25F, .5F, 50F, /* isFocal= */ true, /* isAnchor= */ true)
                 .build());
+  }
+
+  @Test
+  public void testGetFocalKeylines() {
+    KeylineState keylineState =
+        new KeylineState.Builder(100F, 0)
+            .addKeyline(25F, .5F, 50F)
+            .addKeylineRange(100F, 0F, 100F, 2, true)
+            .addKeyline(275F, .5F, 50F)
+            .build();
+
+    List<Keyline> focalKeylines = keylineState.getFocalKeylines();
+
+    assertThat(focalKeylines).isEqualTo(keylineState.getKeylines().subList(1, 3));
   }
 
   /**

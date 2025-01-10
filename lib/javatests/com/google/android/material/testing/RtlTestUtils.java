@@ -16,7 +16,6 @@
 
 package com.google.android.material.testing;
 
-import static android.os.Build.VERSION.SDK_INT;
 import static com.google.common.truth.Truth.assertThat;
 
 import android.annotation.SuppressLint;
@@ -24,15 +23,12 @@ import android.app.Application;
 import android.content.pm.ApplicationInfo;
 import android.content.res.Configuration;
 import android.content.res.Resources;
-import android.os.Build.VERSION_CODES;
 import android.util.DisplayMetrics;
-import androidx.annotation.RequiresApi;
 import androidx.test.core.app.ApplicationProvider;
 import java.util.Locale;
 
 public final class RtlTestUtils {
 
-  @RequiresApi(api = VERSION_CODES.JELLY_BEAN_MR1)
   public static void checkAppSupportsRtl() {
     Application application = ApplicationProvider.getApplicationContext();
     ApplicationInfo info = application.getApplicationInfo();
@@ -41,11 +37,6 @@ public final class RtlTestUtils {
     assertThat(info.targetSdkVersion).isGreaterThan(16);
   }
 
-  public static void checkPlatformSupportsRtl() {
-    assertThat(SDK_INT).isGreaterThan(16);
-  }
-
-  @RequiresApi(api = VERSION_CODES.JELLY_BEAN_MR1)
   public static void applyRtlPseudoLocale() {
     setLocale(new Locale("ar", "XB"));
   }
@@ -53,7 +44,6 @@ public final class RtlTestUtils {
   /**
    * @see org.robolectric.RuntimeEnvironment#setQualifiers(String)
    */
-  @RequiresApi(api = VERSION_CODES.JELLY_BEAN_MR1)
   @SuppressWarnings("deprecation")
   @SuppressLint("AppBundleLocaleChanges")
   private static void setLocale(Locale locale) {

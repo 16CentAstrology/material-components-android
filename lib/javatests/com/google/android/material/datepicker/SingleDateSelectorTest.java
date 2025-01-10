@@ -56,7 +56,7 @@ public class SingleDateSelectorTest {
 
   @Before
   public void setupMonthAdapters() {
-    ApplicationProvider.getApplicationContext().setTheme(R.style.Theme_MaterialComponents_Light);
+    ApplicationProvider.getApplicationContext().setTheme(R.style.Theme_Material3_Light);
     activity = Robolectric.buildActivity(AppCompatActivity.class).setup().get();
     context = activity.getApplicationContext();
     res = context.getResources();
@@ -231,13 +231,13 @@ public class SingleDateSelectorTest {
 
   @Test
   public void textFieldPlaceholder_usesCustomFormat() {
-    singleDateSelector.setTextInputFormat(new SimpleDateFormat("kk:mm:ss mm/dd/yyyy"));
+    singleDateSelector.setTextInputFormat(new SimpleDateFormat("kk:mm:ss MM/dd/yyyy"));
     View root = getRootView();
     ((ViewGroup) activity.findViewById(android.R.id.content)).addView(root);
 
     TextInputLayout textInputLayout = root.findViewById(R.id.mtrl_picker_text_input_date);
 
-    assertThat(textInputLayout.getPlaceholderText().toString()).isEqualTo("kk:mm:ss mm/dd/yyyy");
+    assertThat(textInputLayout.getPlaceholderText().toString()).isEqualTo("kk:mm:ss MM/dd/yyyy");
   }
 
   @Test

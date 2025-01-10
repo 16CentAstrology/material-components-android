@@ -22,6 +22,8 @@ dependencies {
 
   api project(fromPath("lib"))
   api project(fromPath("testing/java/com/google/android/material/testapp/base"))
+
+  api 'androidx.multidex:multidex:2.0.0'
 }
 
 android {
@@ -36,7 +38,8 @@ android {
     main.res.srcDirs = [ 'res' ]
   }
   defaultConfig {
-    minSdkVersion 14
+    multiDexEnabled true
+    minSdkVersion 21
     targetSdkVersion 33
   }
 }

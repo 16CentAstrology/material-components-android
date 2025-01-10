@@ -19,8 +19,8 @@
     package="com.google.android.libraries.material.testing">
 
   <uses-sdk
-      android:minSdkVersion="14"
-      android:targetSdkVersion="33"/>
+      android:minSdkVersion="21"
+    />
 
   <application/>
 </manifest>

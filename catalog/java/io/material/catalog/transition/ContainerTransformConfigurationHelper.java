@@ -19,10 +19,8 @@ package io.material.catalog.transition;
 import io.material.catalog.R;
 
 import android.annotation.SuppressLint;
-import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.DialogInterface.OnDismissListener;
-import android.os.Build.VERSION_CODES;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.SparseIntArray;
@@ -39,7 +37,6 @@ import android.widget.RadioGroup;
 import android.widget.TextView;
 import androidx.annotation.IdRes;
 import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
 import androidx.core.view.animation.PathInterpolatorCompat;
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
@@ -54,7 +51,6 @@ import com.google.android.material.transition.MaterialContainerTransform;
  * A helper class which manages all configuration UI presented in {@link
  * TransitionContainerTransformDemoFragment}.
  */
-@TargetApi(VERSION_CODES.ICE_CREAM_SANDWICH)
 public class ContainerTransformConfigurationHelper {
 
   private static final String CUBIC_CONTROL_FORMAT = "%.3f";
@@ -110,7 +106,6 @@ public class ContainerTransformConfigurationHelper {
   }
 
   /** Set up the platform transition according to the config helper's parameters. */
-  @RequiresApi(VERSION_CODES.LOLLIPOP)
   void configure(
       com.google.android.material.transition.platform.MaterialContainerTransform transform,
       boolean entering) {

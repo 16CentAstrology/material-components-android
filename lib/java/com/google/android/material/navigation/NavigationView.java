@@ -30,12 +30,9 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Rect;
 import android.graphics.RectF;
-import android.graphics.drawable.ColorDrawable;
-import android.graphics.drawable.ColorStateListDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.InsetDrawable;
 import android.graphics.drawable.RippleDrawable;
-import android.os.Build;
 import android.os.Build.VERSION;
 import android.os.Build.VERSION_CODES;
 import android.os.Bundle;
@@ -70,13 +67,13 @@ import androidx.annotation.RestrictTo;
 import androidx.annotation.StyleRes;
 import androidx.annotation.VisibleForTesting;
 import androidx.core.content.ContextCompat;
-import androidx.core.view.GravityCompat;
-import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.customview.view.AbsSavedState;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.drawerlayout.widget.DrawerLayout.DrawerListener;
 import androidx.drawerlayout.widget.DrawerLayout.SimpleDrawerListener;
+import com.google.android.material.animation.AnimationUtils;
+import com.google.android.material.drawable.DrawableUtils;
 import com.google.android.material.internal.ContextUtils;
 import com.google.android.material.internal.NavigationMenu;
 import com.google.android.material.internal.NavigationMenuPresenter;
@@ -145,8 +142,12 @@ public class NavigationView extends ScrimInsetsFrameLayout implements MaterialBa
   private OnGlobalLayoutListener onGlobalLayoutListener;
   private boolean topInsetScrimEnabled = true;
   private boolean bottomInsetScrimEnabled = true;
+  private boolean startInsetScrimEnabled = true;
+  private boolean endInsetScrimEnabled = true;
 
   @Px private int drawerLayoutCornerSize = 0;
+  private final boolean drawerLayoutCornerSizeBackAnimationEnabled;
+  @Px private final int drawerLayoutCornerSizeBackAnimationMax;
   private final ShapeableDelegate shapeableDelegate = ShapeableDelegate.create(this);
 
   private final MaterialSideContainerBackHelper sideContainerBackHelper =
@@ -167,6 +168,7 @@ public class NavigationView extends ScrimInsetsFrameLayout implements MaterialBa
         public void onDrawerClosed(@NonNull View drawerView) {
           if (drawerView == NavigationView.this) {
             backOrchestrator.stopListeningForBackCallbacks();
+            maybeClearCornerSizeAnimationForDrawerLayout();
           }
         }
       };
@@ -193,34 +195,31 @@ public class NavigationView extends ScrimInsetsFrameLayout implements MaterialBa
             context, attrs, R.styleable.NavigationView, defStyleAttr, DEF_STYLE_RES);
 
     if (a.hasValue(R.styleable.NavigationView_android_background)) {
-      ViewCompat.setBackground(this, a.getDrawable(R.styleable.NavigationView_android_background));
+      setBackground(a.getDrawable(R.styleable.NavigationView_android_background));
     }
 
     // Get the drawer layout corner size to be used to shape the exposed corners of this view when
     // placed inside a drawer layout.
     drawerLayoutCornerSize =
         a.getDimensionPixelSize(R.styleable.NavigationView_drawerLayoutCornerSize, 0);
+    drawerLayoutCornerSizeBackAnimationEnabled = drawerLayoutCornerSize == 0;
+    drawerLayoutCornerSizeBackAnimationMax =
+        getResources().getDimensionPixelSize(R.dimen.m3_navigation_drawer_layout_corner_size);
 
-    Drawable background = getBackground();
     // Set the background to a MaterialShapeDrawable if it hasn't been set or if it can be converted
     // to a MaterialShapeDrawable.
-    if (background == null
-        || background instanceof ColorDrawable
-        || (VERSION.SDK_INT >= VERSION_CODES.Q
-            && background instanceof ColorStateListDrawable)) {
+    Drawable background = getBackground();
+    ColorStateList backgroundColorStateList = DrawableUtils.getColorStateListOrNull(background);
+
+    if (background == null || backgroundColorStateList != null) {
       ShapeAppearanceModel shapeAppearanceModel =
           ShapeAppearanceModel.builder(context, attrs, defStyleAttr, DEF_STYLE_RES).build();
       MaterialShapeDrawable materialShapeDrawable = new MaterialShapeDrawable(shapeAppearanceModel);
-      if (background instanceof ColorDrawable) {
-        materialShapeDrawable.setFillColor(
-            ColorStateList.valueOf(((ColorDrawable) background).getColor()));
-      }
-      if (VERSION.SDK_INT >= VERSION_CODES.Q && background instanceof ColorStateListDrawable) {
-        materialShapeDrawable.setFillColor(
-            ((ColorStateListDrawable) background).getColorStateList());
+      if (backgroundColorStateList != null) {
+        materialShapeDrawable.setFillColor(backgroundColorStateList);
       }
       materialShapeDrawable.initializeElevationOverlay(context);
-      ViewCompat.setBackground(this, materialShapeDrawable);
+      setBackground(materialShapeDrawable);
     }
 
     if (a.hasValue(R.styleable.NavigationView_elevation)) {
@@ -286,10 +285,9 @@ public class NavigationView extends ScrimInsetsFrameLayout implements MaterialBa
           MaterialResources.getColorStateList(
               context, a, R.styleable.NavigationView_itemRippleColor);
 
-      // Use a ripple matching the item's shape as the foreground for api level 21+ and if a ripple
-      // color is set. Otherwise the selectableItemBackground foreground from the item layout will
-      // be used
-      if (VERSION.SDK_INT >= VERSION_CODES.LOLLIPOP && itemRippleColor != null) {
+      // Use a ripple matching the item's shape as the foreground if a ripple color is set.
+      // Otherwise the selectableItemBackground foreground from the item layout will be used.
+      if (itemRippleColor != null) {
         Drawable itemRippleMask = createDefaultItemDrawable(a, null);
         RippleDrawable ripple =
             new RippleDrawable(
@@ -331,6 +329,11 @@ public class NavigationView extends ScrimInsetsFrameLayout implements MaterialBa
 
     setBottomInsetScrimEnabled(
         a.getBoolean(R.styleable.NavigationView_bottomInsetScrimEnabled, bottomInsetScrimEnabled));
+    setStartInsetScrimEnabled(
+        a.getBoolean(R.styleable.NavigationView_startInsetScrimEnabled, startInsetScrimEnabled));
+
+    setEndInsetScrimEnabled(
+        a.getBoolean(R.styleable.NavigationView_endInsetScrimEnabled, endInsetScrimEnabled));
 
     final int itemIconPadding =
         a.getDimensionPixelSize(R.styleable.NavigationView_itemIconPadding, 0);
@@ -407,12 +410,11 @@ public class NavigationView extends ScrimInsetsFrameLayout implements MaterialBa
   private void maybeUpdateCornerSizeForDrawerLayout(@Px int width, @Px int height) {
     if (getParent() instanceof DrawerLayout
         && getLayoutParams() instanceof DrawerLayout.LayoutParams
-        && drawerLayoutCornerSize > 0
+        && (drawerLayoutCornerSize > 0 || drawerLayoutCornerSizeBackAnimationEnabled)
         && getBackground() instanceof MaterialShapeDrawable) {
       int layoutGravity = ((DrawerLayout.LayoutParams) getLayoutParams()).gravity;
       boolean isAbsGravityLeft =
-          GravityCompat.getAbsoluteGravity(layoutGravity, ViewCompat.getLayoutDirection(this))
-              == Gravity.LEFT;
+          Gravity.getAbsoluteGravity(layoutGravity, getLayoutDirection()) == Gravity.LEFT;
 
       // Create and set a background to a MaterialShapeDrawable with the gravity edge's corners
       // set to zero. This is needed in addition to the ShapeableDelegate's clip since the
@@ -439,6 +441,13 @@ public class NavigationView extends ScrimInsetsFrameLayout implements MaterialBa
     }
   }
 
+  private void maybeClearCornerSizeAnimationForDrawerLayout() {
+    if (drawerLayoutCornerSizeBackAnimationEnabled && drawerLayoutCornerSize != 0) {
+      drawerLayoutCornerSize = 0;
+      maybeUpdateCornerSizeForDrawerLayout(getWidth(), getHeight());
+    }
+  }
+
   private boolean hasShapeAppearance(@NonNull TintTypedArray a) {
     return a.hasValue(R.styleable.NavigationView_itemShapeAppearance)
         || a.hasValue(R.styleable.NavigationView_itemShapeAppearanceOverlay);
@@ -455,6 +464,10 @@ public class NavigationView extends ScrimInsetsFrameLayout implements MaterialBa
       // Make sure there's only ever one listener
       drawerLayout.removeDrawerListener(backDrawerListener);
       drawerLayout.addDrawerListener(backDrawerListener);
+
+      if (drawerLayout.isDrawerOpen(this)) {
+        backOrchestrator.startListeningForBackCallbacksWithPriorityOverlay();
+      }
     }
   }
 
@@ -462,17 +475,15 @@ public class NavigationView extends ScrimInsetsFrameLayout implements MaterialBa
   protected void onDetachedFromWindow() {
     super.onDetachedFromWindow();
 
-    if (Build.VERSION.SDK_INT < 16) {
-      getViewTreeObserver().removeGlobalOnLayoutListener(onGlobalLayoutListener);
-    } else {
-      getViewTreeObserver().removeOnGlobalLayoutListener(onGlobalLayoutListener);
-    }
+    getViewTreeObserver().removeOnGlobalLayoutListener(onGlobalLayoutListener);
 
     ViewParent parent = getParent();
     if (parent instanceof DrawerLayout) {
       DrawerLayout drawerLayout = (DrawerLayout) parent;
       drawerLayout.removeDrawerListener(backDrawerListener);
     }
+
+    backOrchestrator.stopListeningForBackCallbacks();
   }
 
   @Override
@@ -483,9 +494,7 @@ public class NavigationView extends ScrimInsetsFrameLayout implements MaterialBa
 
   @Override
   public void setElevation(float elevation) {
-    if (VERSION.SDK_INT >= VERSION_CODES.LOLLIPOP) {
-      super.setElevation(elevation);
-    }
+    super.setElevation(elevation);
     MaterialShapeUtils.setElevation(this, elevation);
   }
 
@@ -928,6 +937,34 @@ public class NavigationView extends ScrimInsetsFrameLayout implements MaterialBa
     this.bottomInsetScrimEnabled = enabled;
   }
 
+  /** Whether or not the NavigationView will draw a scrim behind the window's start inset. */
+  public boolean isStartInsetScrimEnabled() {
+    return this.startInsetScrimEnabled;
+  }
+
+  /**
+   * Set whether or not the NavigationView should draw a scrim behind the window's start inset.
+   *
+   * @param enabled true when the NavigationView should draw a scrim.
+   */
+  public void setStartInsetScrimEnabled(boolean enabled) {
+    this.startInsetScrimEnabled = enabled;
+  }
+
+  /** Whether or not the NavigationView will draw a scrim behind the window's end inset. */
+  public boolean isEndInsetScrimEnabled() {
+    return this.endInsetScrimEnabled;
+  }
+
+  /**
+   * Set whether or not the NavigationView should draw a scrim behind the window's end inset.
+   *
+   * @param enabled true when the NavigationView should draw a scrim.
+   */
+  public void setEndInsetScrimEnabled(boolean enabled) {
+    this.endInsetScrimEnabled = enabled;
+  }
+
   /**
    * Get the distance between the start edge of the NavigationView and the start of a menu divider.
    */
@@ -986,6 +1023,13 @@ public class NavigationView extends ScrimInsetsFrameLayout implements MaterialBa
   public void updateBackProgress(@NonNull BackEventCompat backEvent) {
     Pair<DrawerLayout, DrawerLayout.LayoutParams> drawerLayoutPair = requireDrawerLayoutParent();
     sideContainerBackHelper.updateBackProgress(backEvent, drawerLayoutPair.second.gravity);
+
+    if (drawerLayoutCornerSizeBackAnimationEnabled) {
+      float progress = sideContainerBackHelper.interpolateProgress(backEvent.getProgress());
+      drawerLayoutCornerSize =
+          AnimationUtils.lerp(0, drawerLayoutCornerSizeBackAnimationMax, progress);
+      maybeUpdateCornerSizeForDrawerLayout(getWidth(), getHeight());
+    }
   }
 
   @Override
@@ -1012,6 +1056,7 @@ public class NavigationView extends ScrimInsetsFrameLayout implements MaterialBa
   public void cancelBackProgress() {
     requireDrawerLayoutParent();
     sideContainerBackHelper.cancelBackProgress();
+    maybeClearCornerSizeAnimationForDrawerLayout();
   }
 
   @CanIgnoreReturnValue
@@ -1074,13 +1119,15 @@ public class NavigationView extends ScrimInsetsFrameLayout implements MaterialBa
             presenter.setBehindStatusBar(isBehindStatusBar);
             setDrawTopInsetForeground(isBehindStatusBar && isTopInsetScrimEnabled());
 
+            boolean isRtl = getLayoutDirection() == LAYOUT_DIRECTION_RTL;
             // The navigation view could be left aligned or just hidden out of view in a drawer
             // layout when the global layout listener is called.
             boolean isOnLeftSide = (tmpLocation[0] == 0) || (tmpLocation[0] + getWidth() == 0);
-            setDrawLeftInsetForeground(isOnLeftSide);
+            setDrawLeftInsetForeground(
+                isOnLeftSide && (isRtl ? isEndInsetScrimEnabled() : isStartInsetScrimEnabled()));
 
             Activity activity = ContextUtils.getActivity(getContext());
-            if (activity != null && VERSION.SDK_INT >= VERSION_CODES.LOLLIPOP) {
+            if (activity != null) {
               Rect displayBounds = WindowUtils.getCurrentWindowBounds(activity);
 
               boolean isBehindSystemNav = displayBounds.height() - getHeight() == tmpLocation[1];
@@ -1095,7 +1142,8 @@ public class NavigationView extends ScrimInsetsFrameLayout implements MaterialBa
                   (displayBounds.width() == tmpLocation[0])
                       || (displayBounds.width() - getWidth() == tmpLocation[0]);
 
-              setDrawRightInsetForeground(isOnRightSide);
+              setDrawRightInsetForeground(
+                  isOnRightSide && (isRtl ? isStartInsetScrimEnabled() : isEndInsetScrimEnabled()));
             }
           }
         };

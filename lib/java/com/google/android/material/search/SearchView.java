@@ -26,7 +26,6 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.drawable.Drawable;
-import android.os.Build;
 import android.os.Build.VERSION;
 import android.os.Build.VERSION_CODES;
 import android.os.Parcel;
@@ -56,7 +55,6 @@ import androidx.annotation.MenuRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.Px;
-import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.annotation.StringRes;
 import androidx.annotation.StyleRes;
@@ -251,7 +249,6 @@ public class SearchView extends FrameLayout
     updateSoftInputMode();
   }
 
-  @RequiresApi(VERSION_CODES.LOLLIPOP)
   @Override
   public void setElevation(float elevation) {
     super.setElevation(elevation);
@@ -263,6 +260,17 @@ public class SearchView extends FrameLayout
     super.onAttachedToWindow();
 
     MaterialShapeUtils.setParentAbsoluteElevation(this);
+    TransitionState state = getCurrentTransitionState();
+    updateModalForAccessibility(state);
+    updateListeningForBackCallbacks(state);
+  }
+
+  @Override
+  protected void onDetachedFromWindow() {
+    super.onDetachedFromWindow();
+
+    setModalForAccessibility(/* isSearchViewModal= */ false);
+    backOrchestrator.stopListeningForBackCallbacks();
   }
 
   @Override
@@ -465,6 +473,7 @@ public class SearchView extends FrameLayout
       if (toolbar.getNavigationIconTint() != null) {
         DrawableCompat.setTint(navigationIconDrawable, toolbar.getNavigationIconTint());
       }
+      DrawableCompat.setLayoutDirection(navigationIconDrawable, getLayoutDirection());
       toolbar.setNavigationIcon(
           new FadeThroughDrawable(searchBar.getNavigationIcon(), navigationIconDrawable));
       updateNavigationIconProgressIfNeeded();
@@ -564,6 +573,7 @@ public class SearchView extends FrameLayout
     }
     updateNavigationIconIfNeeded();
     setUpBackgroundViewElevationOverlay();
+    updateListeningForBackCallbacks(getCurrentTransitionState());
   }
 
   /**
@@ -790,8 +800,17 @@ public class SearchView extends FrameLayout
   }
 
   void setTransitionState(@NonNull TransitionState state) {
+    setTransitionState(state, /* updateModalForAccessibility= */ true);
+  }
+
+  private void setTransitionState(
+      @NonNull TransitionState state, boolean updateModalForAccessibility) {
     if (currentTransitionState.equals(state)) {
       return;
+    }
+
+    if (updateModalForAccessibility) {
+      updateModalForAccessibility(state);
     }
 
     TransitionState previousState = currentTransitionState;
@@ -801,6 +820,22 @@ public class SearchView extends FrameLayout
       listener.onStateChanged(this, previousState, state);
     }
 
+    updateListeningForBackCallbacks(state);
+
+    if (searchBar != null && state == TransitionState.HIDDEN) {
+      searchBar.sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_FOCUSED);
+    }
+  }
+
+  private void updateModalForAccessibility(@NonNull TransitionState state) {
+    if (state == TransitionState.SHOWN) {
+      setModalForAccessibility(true);
+    } else if (state == TransitionState.HIDDEN) {
+      setModalForAccessibility(false);
+    }
+  }
+
+  private void updateListeningForBackCallbacks(@NonNull TransitionState state) {
     // Only automatically handle back if we have a search bar to collapse to, and if back handling
     // is enabled for the SearchView.
     if (searchBar != null && backHandlingEnabled) {
@@ -830,7 +865,6 @@ public class SearchView extends FrameLayout
       return;
     }
     searchViewAnimationHelper.show();
-    setModalForAccessibility(true);
   }
 
   /**
@@ -845,7 +879,6 @@ public class SearchView extends FrameLayout
       return;
     }
     searchViewAnimationHelper.hide();
-    setModalForAccessibility(false);
   }
 
   /** Updates the visibility of the {@link SearchView} without an animation. */
@@ -853,10 +886,9 @@ public class SearchView extends FrameLayout
     boolean wasVisible = rootView.getVisibility() == VISIBLE;
     rootView.setVisibility(visible ? VISIBLE : GONE);
     updateNavigationIconProgressIfNeeded();
-    if (wasVisible != visible) {
-      setModalForAccessibility(visible);
-    }
-    setTransitionState(visible ? TransitionState.SHOWN : TransitionState.HIDDEN);
+    setTransitionState(
+        visible ? TransitionState.SHOWN : TransitionState.HIDDEN,
+        /* updateModalForAccessibility= */ wasVisible != visible);
   }
 
   private void updateNavigationIconProgressIfNeeded() {
@@ -904,9 +936,6 @@ public class SearchView extends FrameLayout
     editText.post(
         () -> {
           editText.clearFocus();
-          if (searchBar != null) {
-            searchBar.requestFocus();
-          }
           ViewUtils.hideKeyboard(editText, useWindowInsetsController);
         });
   }
@@ -922,7 +951,7 @@ public class SearchView extends FrameLayout
   public void setModalForAccessibility(boolean isSearchViewModal) {
     ViewGroup rootView = (ViewGroup) this.getRootView();
 
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN && isSearchViewModal) {
+    if (isSearchViewModal) {
       childImportantForAccessibilityMap = new HashMap<>(rootView.getChildCount());
     }
     updateChildImportantForAccessibility(rootView, isSearchViewModal);
@@ -939,9 +968,7 @@ public class SearchView extends FrameLayout
    * search results.
    */
   public void setToolbarTouchscreenBlocksFocus(boolean touchscreenBlocksFocus) {
-    if (Build.VERSION.SDK_INT >= VERSION_CODES.LOLLIPOP) {
-      toolbar.setTouchscreenBlocksFocus(touchscreenBlocksFocus);
-    }
+    toolbar.setTouchscreenBlocksFocus(touchscreenBlocksFocus);
   }
 
   @SuppressLint("InlinedApi") // View Compat will handle the differences.
@@ -962,17 +989,13 @@ public class SearchView extends FrameLayout
         if (childImportantForAccessibilityMap != null
             && childImportantForAccessibilityMap.containsKey(child)) {
           // Restores the original important for accessibility value of the child view.
-          ViewCompat.setImportantForAccessibility(
-              child, childImportantForAccessibilityMap.get(child));
+          child.setImportantForAccessibility(childImportantForAccessibilityMap.get(child));
         }
       } else {
         // Saves the important for accessibility value of the child view.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-          childImportantForAccessibilityMap.put(child, child.getImportantForAccessibility());
-        }
+        childImportantForAccessibilityMap.put(child, child.getImportantForAccessibility());
 
-        ViewCompat.setImportantForAccessibility(
-            child, ViewCompat.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
+        child.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
       }
     }
   }

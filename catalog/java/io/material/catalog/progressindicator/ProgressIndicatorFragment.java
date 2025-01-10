@@ -19,6 +19,7 @@ import io.material.catalog.R;
 
 import androidx.fragment.app.Fragment;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import dagger.Provides;
 import dagger.android.ContributesAndroidInjector;
 import dagger.multibindings.IntoSet;
@@ -53,33 +54,51 @@ public class ProgressIndicatorFragment extends DemoLandingFragment {
     };
   }
 
-  @Override
   @NonNull
-  public List<Demo> getAdditionalDemos() {
+  public List<Demo> getSharedAdditionalDemos() {
     List<Demo> additionalDemos = new ArrayList<>();
     additionalDemos.add(
-        new Demo(R.string.cat_progress_indicator_demo_indeterminate_title) {
+        new Demo(R.string.cat_progress_indicator_visibility_demo_title) {
+          @Nullable
           @Override
           public Fragment createFragment() {
-            return new ProgressIndicatorIndeterminateDemoFragment();
-          }
-        });
-    additionalDemos.add(
-        new Demo(R.string.cat_progress_indicator_demo_determinate_title) {
-          @Override
-          public Fragment createFragment() {
-            return new ProgressIndicatorDeterminateDemoFragment();
+            return new ProgressIndicatorVisibilityDemoFragment();
           }
         });
     additionalDemos.add(
         new Demo(R.string.cat_progress_indicator_demo_standalone_title) {
+          @Nullable
           @Override
           public Fragment createFragment() {
             return new ProgressIndicatorStandaloneDemoFragment();
           }
         });
+    additionalDemos.add(
+        new Demo(R.string.cat_progress_indicator_wave_demo_title) {
+          @Nullable
+          @Override
+          public Fragment createFragment() {
+            return new ProgressIndicatorWaveDemoFragment();
+          }
+        });
     return additionalDemos;
   }
+
+  @Override
+  @NonNull
+  public List<Demo> getAdditionalDemos() {
+    List<Demo> additionalDemos = getSharedAdditionalDemos();
+    additionalDemos.add(
+        new Demo(R.string.cat_progress_indicator_multi_color_demo_title) {
+          @Nullable
+          @Override
+          public Fragment createFragment() {
+            return new ProgressIndicatorMultiColorDemoFragment();
+          }
+        });
+    return additionalDemos;
+  }
+
   /** The Dagger module for {@link ProgressIndicatorFragment} dependencies. */
   @dagger.Module
   public abstract static class Module {

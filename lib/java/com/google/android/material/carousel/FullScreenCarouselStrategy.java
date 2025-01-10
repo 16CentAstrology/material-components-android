@@ -28,7 +28,8 @@ import androidx.annotation.NonNull;
  * create a layout to browse one item at a time.
  *
  * <p>Note that the item masks will be based on the items encompassing the full width or full height
- * of the carousel. The carousel item dimensions should reflect this with `match_parent` dimensions.
+ * of the carousel. The carousel item dimensions should reflect this with {@code match_parent}
+ * dimensions.
  *
  * <p>This class will automatically be reversed by {@link CarouselLayoutManager} if being laid out
  * right-to-left and does not need to make any account for layout direction itself.
@@ -42,7 +43,8 @@ public class FullScreenCarouselStrategy extends CarouselStrategy {
 
   @Override
   @NonNull
-  KeylineState onFirstChildMeasuredWithMargins(@NonNull Carousel carousel, @NonNull View child) {
+  public KeylineState onFirstChildMeasuredWithMargins(
+      @NonNull Carousel carousel, @NonNull View child) {
     float availableSpace;
     LayoutParams childLayoutParams = (LayoutParams) child.getLayoutParams();
     float childMargins;
@@ -54,17 +56,18 @@ public class FullScreenCarouselStrategy extends CarouselStrategy {
       childMargins = childLayoutParams.topMargin + childLayoutParams.bottomMargin;
     }
     float targetChildSize = min(availableSpace + childMargins, availableSpace);
-    Arrangement arrangement = new Arrangement(
-        /* priority= */ 0,
-        /* targetSmallSize= */ 0,
-        /* minSmallSize= */ 0,
-        /* maxSmallSize= */ 0,
-        /* smallCount= */ 0,
-        /* targetMediumSize= */ 0,
-        /* mediumCount= */ 0,
-        targetChildSize,
-        /* largeCount= */ 1,
-        availableSpace);
+    Arrangement arrangement =
+        new Arrangement(
+            /* priority= */ 0,
+            /* targetSmallSize= */ 0,
+            /* minSmallSize= */ 0,
+            /* maxSmallSize= */ 0,
+            /* smallCount= */ 0,
+            /* targetMediumSize= */ 0,
+            /* mediumCount= */ 0,
+            targetChildSize,
+            /* largeCount= */ 1,
+            availableSpace);
     return createLeftAlignedKeylineState(
         child.getContext(), childMargins, availableSpace, arrangement);
   }

@@ -17,8 +17,6 @@
 package com.google.android.material.carousel;
 
 import static com.google.android.material.carousel.CarouselStrategyHelper.createKeylineState;
-import static com.google.android.material.carousel.CarouselStrategyHelper.getSmallSizeMax;
-import static com.google.android.material.carousel.CarouselStrategyHelper.getSmallSizeMin;
 import static com.google.android.material.carousel.CarouselStrategyHelper.maxValue;
 import static java.lang.Math.ceil;
 import static java.lang.Math.floor;
@@ -50,9 +48,14 @@ public class HeroCarouselStrategy extends CarouselStrategy {
   private static final int[] SMALL_COUNTS = new int[] {1};
   private static final int[] MEDIUM_COUNTS = new int[] {0, 1};
 
+  // Current count of number of keylines. We want to refresh the strategy if there are less items
+  // than this number.
+  private int keylineCount = 0;
+
   @Override
   @NonNull
-  KeylineState onFirstChildMeasuredWithMargins(@NonNull Carousel carousel, @NonNull View child) {
+  public KeylineState onFirstChildMeasuredWithMargins(
+      @NonNull Carousel carousel, @NonNull View child) {
     int availableSpace = carousel.getContainerHeight();
     if (carousel.isHorizontal()) {
       availableSpace = carousel.getContainerWidth();
@@ -68,8 +71,10 @@ public class HeroCarouselStrategy extends CarouselStrategy {
       measuredChildSize = child.getMeasuredHeight() * 2;
     }
 
-    float smallChildSizeMin = getSmallSizeMin(child.getContext()) + childMargins;
-    float smallChildSizeMax = getSmallSizeMax(child.getContext()) + childMargins;
+    float smallChildSizeMin = getSmallItemSizeMin() + childMargins;
+    float smallChildSizeMax = getSmallItemSizeMax() + childMargins;
+    // Ensure that the max size at least as big as the small size.
+    smallChildSizeMax = max(smallChildSizeMax, smallChildSizeMin);
 
     float targetLargeChildSize = min(measuredChildSize + childMargins, availableSpace);
     // Ideally we would like to create a balanced arrangement where a small item is 1/3 the size of
@@ -78,9 +83,14 @@ public class HeroCarouselStrategy extends CarouselStrategy {
     float targetSmallChildSize =
         MathUtils.clamp(
             measuredChildSize / 3F + childMargins,
-            getSmallSizeMin(child.getContext()) + childMargins,
-            getSmallSizeMax(child.getContext()) + childMargins);
+            smallChildSizeMin + childMargins,
+            smallChildSizeMax + childMargins);
     float targetMediumChildSize = (targetLargeChildSize + targetSmallChildSize) / 2F;
+
+    int[] smallCounts = SMALL_COUNTS;
+    if (availableSpace < smallChildSizeMin * 2) {
+      smallCounts = new int[] { 0 };
+    }
 
     // Find the minimum space left for large items after filling the carousel with the most
     // permissible small items to determine a plausible minimum large count.
@@ -100,20 +110,48 @@ public class HeroCarouselStrategy extends CarouselStrategy {
             smallChildSizeMin,
             smallChildSizeMax,
                 isCenterAligned
-                ? doubleCounts(SMALL_COUNTS)
-                : SMALL_COUNTS,
+                ? doubleCounts(smallCounts)
+                : smallCounts,
             targetMediumChildSize,
                 isCenterAligned
                 ? doubleCounts(MEDIUM_COUNTS)
                 : MEDIUM_COUNTS,
             targetLargeChildSize,
             largeCounts);
+
+    keylineCount = arrangement.getItemCount();
+
+    // If there's less items than keylines, force it to be start-aligned.
+    if (arrangement.getItemCount() > carousel.getItemCount()) {
+      isCenterAligned = false;
+      arrangement =
+          Arrangement.findLowestCostArrangement(
+              availableSpace,
+              targetSmallChildSize,
+              smallChildSizeMin,
+              smallChildSizeMax,
+              smallCounts,
+              targetMediumChildSize,
+              MEDIUM_COUNTS,
+              targetLargeChildSize,
+              largeCounts);
+    }
+
     return createKeylineState(
         child.getContext(),
         childMargins,
         availableSpace,
         arrangement,
-        carousel.getCarouselAlignment());
+        isCenterAligned
+            ? CarouselLayoutManager.ALIGNMENT_CENTER
+            : CarouselLayoutManager.ALIGNMENT_START);
     }
+
+  @Override
+  public boolean shouldRefreshKeylineState(@NonNull Carousel carousel, int oldItemCount) {
+    return carousel.getCarouselAlignment() == CarouselLayoutManager.ALIGNMENT_CENTER
+        && ((oldItemCount < keylineCount && carousel.getItemCount() >= keylineCount)
+            || (oldItemCount >= keylineCount && carousel.getItemCount() < keylineCount));
+  }
 }
 

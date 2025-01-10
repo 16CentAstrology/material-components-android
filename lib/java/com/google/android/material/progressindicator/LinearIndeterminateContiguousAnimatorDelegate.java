@@ -26,8 +26,7 @@ import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator;
 import androidx.vectordrawable.graphics.drawable.Animatable2Compat.AnimationCallback;
-import com.google.android.material.color.MaterialColors;
-import java.util.Arrays;
+import com.google.android.material.progressindicator.DrawingDelegate.ActiveIndicator;
 
 /**
  * This is the implementation class for drawing progress indicator in the linear contiguous
@@ -52,7 +51,7 @@ final class LinearIndeterminateContiguousAnimatorDelegate
   private float animationFraction;
 
   public LinearIndeterminateContiguousAnimatorDelegate(@NonNull LinearProgressIndicatorSpec spec) {
-    super(/*segmentCount=*/ 3);
+    super(/* indicatorCount= */ 3);
 
     baseSpec = spec;
 
@@ -73,7 +72,8 @@ final class LinearIndeterminateContiguousAnimatorDelegate
     if (animator == null) {
       // Instantiates an animator with the linear interpolator to control the animation progress.
       animator = ObjectAnimator.ofFloat(this, ANIMATION_FRACTION, 0, 1);
-      animator.setDuration(DURATION_PER_CYCLE_IN_MS);
+      animator.setDuration(
+          (long) (DURATION_PER_CYCLE_IN_MS * baseSpec.indeterminateAnimatorDurationScale));
       animator.setInterpolator(null);
       animator.setRepeatCount(ValueAnimator.INFINITE);
       animator.addListener(
@@ -87,6 +87,12 @@ final class LinearIndeterminateContiguousAnimatorDelegate
             }
           });
     }
+  }
+
+  private void updateAnimatorsDuration() {
+    maybeInitializeAnimators();
+    animator.setDuration(
+        (long) (DURATION_PER_CYCLE_IN_MS * baseSpec.indeterminateAnimatorDurationScale));
   }
 
   @Override
@@ -104,6 +110,7 @@ final class LinearIndeterminateContiguousAnimatorDelegate
 
   @Override
   public void invalidateSpecValues() {
+    updateAnimatorsDuration();
     resetPropertiesForNewStart();
   }
 
@@ -121,33 +128,37 @@ final class LinearIndeterminateContiguousAnimatorDelegate
 
   /** Updates the segment position array based on current playtime. */
   private void updateSegmentPositions(int playtime) {
-    segmentPositions[0] = 0f;
+    activeIndicators.get(0).startFraction = 0f;
     float fraction = getFractionInRange(playtime, 0, TOTAL_DURATION_IN_MS);
-    segmentPositions[1] = segmentPositions[2] = interpolator.getInterpolation(fraction);
+    activeIndicators.get(0).endFraction =
+        activeIndicators.get(1).startFraction = interpolator.getInterpolation(fraction);
     fraction += (float) DURATION_PER_CYCLE_IN_MS / TOTAL_DURATION_IN_MS;
-    segmentPositions[3] = segmentPositions[4] = interpolator.getInterpolation(fraction);
-    segmentPositions[5] = 1f;
+    activeIndicators.get(1).endFraction =
+        activeIndicators.get(2).startFraction = interpolator.getInterpolation(fraction);
+    activeIndicators.get(2).endFraction = 1f;
   }
 
   /** Updates the segment colors array based on the updated color index. */
   private void maybeUpdateSegmentColors() {
-    if (dirtyColors && segmentPositions[3] < 1f) {
-      segmentColors[2] = segmentColors[1];
-      segmentColors[1] = segmentColors[0];
-      segmentColors[0] =
-          MaterialColors.compositeARGBWithAlpha(
-              baseSpec.indicatorColors[newIndicatorColorIndex], drawable.getAlpha());
+    if (dirtyColors && activeIndicators.get(1).endFraction < 1f) {
+      activeIndicators.get(2).color = activeIndicators.get(1).color;
+      activeIndicators.get(1).color = activeIndicators.get(0).color;
+      activeIndicators.get(0).color = baseSpec.indicatorColors[newIndicatorColorIndex];
       dirtyColors = false;
     }
   }
 
   @VisibleForTesting
+  @Override
   void resetPropertiesForNewStart() {
     dirtyColors = true;
     newIndicatorColorIndex = 1;
-    Arrays.fill(
-        segmentColors,
-        MaterialColors.compositeARGBWithAlpha(baseSpec.indicatorColors[0], drawable.getAlpha()));
+    for (ActiveIndicator indicator : activeIndicators) {
+      indicator.color = baseSpec.indicatorColors[0];
+      // No track is drawn in this type of animation. Half gap is used to maintain the gap between
+      // active indicators.
+      indicator.gapSize = baseSpec.indicatorTrackGapSize / 2;
+    }
   }
 
   // ******************* Getters and setters *******************
@@ -157,6 +168,7 @@ final class LinearIndeterminateContiguousAnimatorDelegate
   }
 
   @VisibleForTesting
+  @Override
   void setAnimationFraction(float value) {
     animationFraction = value;
     int playtime = (int) (animationFraction * DURATION_PER_CYCLE_IN_MS);

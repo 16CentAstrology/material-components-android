@@ -24,21 +24,20 @@ import static com.google.android.material.carousel.CarouselHelper.setAdapterItem
 import static com.google.android.material.carousel.CarouselHelper.setViewSize;
 import static com.google.android.material.testing.RtlTestUtils.applyRtlPseudoLocale;
 import static com.google.android.material.testing.RtlTestUtils.checkAppSupportsRtl;
-import static com.google.android.material.testing.RtlTestUtils.checkPlatformSupportsRtl;
 import static com.google.common.truth.Truth.assertThat;
 
 import android.content.Context;
+import android.graphics.Rect;
 import android.graphics.RectF;
-import android.os.Build.VERSION_CODES;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.RecyclerView;
 import android.view.View;
 import android.view.ViewGroup.LayoutParams;
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
 import androidx.test.core.app.ApplicationProvider;
 import com.google.android.material.carousel.CarouselHelper.CarouselTestAdapter;
 import com.google.android.material.carousel.CarouselHelper.WrappedCarouselLayoutManager;
+import com.google.android.material.carousel.CarouselStrategy.StrategyType;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -62,17 +61,15 @@ public class CarouselLayoutManagerRtlTest {
   WrappedCarouselLayoutManager layoutManager;
   CarouselTestAdapter adapter;
 
-  @RequiresApi(api = VERSION_CODES.JELLY_BEAN_MR1)
   @Before
   public void setUp() {
-    checkPlatformSupportsRtl();
     checkAppSupportsRtl();
     applyRtlPseudoLocale();
     createAndSetFixtures(DEFAULT_RECYCLER_VIEW_WIDTH, DEFAULT_ITEM_WIDTH);
     layoutManager.setCarouselStrategy(
         new CarouselStrategy() {
           @Override
-          KeylineState onFirstChildMeasuredWithMargins(
+          public KeylineState onFirstChildMeasuredWithMargins(
               @NonNull Carousel carousel, @NonNull View child) {
             return getTestCenteredKeylineState();
           }
@@ -98,7 +95,8 @@ public class CarouselLayoutManagerRtlTest {
 
     KeylineState leftState =
         KeylineStateList.from(
-                layoutManager, KeylineState.reverse(keylineState, DEFAULT_RECYCLER_VIEW_WIDTH))
+                layoutManager, KeylineState.reverse(keylineState, DEFAULT_RECYCLER_VIEW_WIDTH),
+                0, 0, 0, StrategyType.CONTAINED)
             .getStartState();
 
     MaskableFrameLayout child =
@@ -150,6 +148,20 @@ public class CarouselLayoutManagerRtlTest {
     scrollToPosition(recyclerView, layoutManager, 2);
 
     CarouselHelper.assertChildrenHaveValidOrder(layoutManager);
+  }
+
+  @Test
+  public void testRequestChildRectangleOnScreen_doesntScrollIfChildIsFocal() throws Throwable {
+    setAdapterItems(recyclerView, layoutManager, adapter, createDataSetWithSize(10));
+    assertThat(layoutManager.scrollOffset).isEqualTo(0);
+
+    // Bring second child into focus
+    layoutManager.requestChildRectangleOnScreen(
+        recyclerView, recyclerView.getChildAt(1), new Rect(), /* immediate= */ true);
+
+    // Test Keyline state has 2 focal keylines at the start; default item with is 450 and
+    // focal keyline size is 450, so the scroll offset should be 0.
+    assertThat(layoutManager.scrollOffset).isEqualTo(0);
   }
 
   /**

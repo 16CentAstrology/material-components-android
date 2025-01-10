@@ -22,14 +22,13 @@ import static androidx.annotation.RestrictTo.Scope.LIBRARY_GROUP;
 import static androidx.core.content.ContextCompat.getSystemService;
 
 import android.content.Context;
+import android.content.res.ColorStateList;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
 import android.graphics.PorterDuff;
 import android.graphics.Rect;
 import android.graphics.drawable.ColorDrawable;
-import android.os.Build;
-import android.os.Build.VERSION;
-import android.os.Build.VERSION_CODES;
+import android.graphics.drawable.ColorStateListDrawable;
 import android.util.AttributeSet;
 import android.util.TypedValue;
 import android.view.View;
@@ -43,11 +42,11 @@ import android.view.inputmethod.InputMethodManager;
 import androidx.annotation.Dimension;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
 import androidx.annotation.RestrictTo;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
+import com.google.android.material.drawable.DrawableUtils;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -61,7 +60,6 @@ public class ViewUtils {
 
   private ViewUtils() {}
 
-  @RequiresApi(VERSION_CODES.JELLY_BEAN)
   public static final int EDGE_TO_EDGE_FLAGS =
       View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_LAYOUT_STABLE;
 
@@ -183,7 +181,7 @@ public class ViewUtils {
   }
 
   public static boolean isLayoutRtl(View view) {
-    return ViewCompat.getLayoutDirection(view) == ViewCompat.LAYOUT_DIRECTION_RTL;
+    return view.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL;
   }
 
   public static float dpToPx(@NonNull Context context, @Dimension(unit = Dimension.DP) int dp) {
@@ -232,7 +230,7 @@ public class ViewUtils {
 
     /** Applies this relative padding to the view. */
     public void applyToView(View view) {
-      ViewCompat.setPaddingRelative(view, start, top, end, bottom);
+      view.setPaddingRelative(start, top, end, bottom);
     }
   }
 
@@ -312,9 +310,9 @@ public class ViewUtils {
     // Create a snapshot of the view's padding state.
     final RelativePadding initialPadding =
         new RelativePadding(
-            ViewCompat.getPaddingStart(view),
+            view.getPaddingStart(),
             view.getPaddingTop(),
-            ViewCompat.getPaddingEnd(view),
+            view.getPaddingEnd(),
             view.getPaddingBottom());
     // Set an actual OnApplyWindowInsetsListener which proxies to the given callback, also passing
     // in the original padding state.
@@ -332,7 +330,7 @@ public class ViewUtils {
 
   /** Requests that insets should be applied to this view once it is attached. */
   public static void requestApplyInsetsWhenAttached(@NonNull View view) {
-    if (ViewCompat.isAttachedToWindow(view)) {
+    if (view.isAttachedToWindow()) {
       // We're already attached, just request as normal.
       ViewCompat.requestApplyInsets(view);
     } else {
@@ -374,10 +372,7 @@ public class ViewUtils {
     if (view == null) {
       return null;
     }
-    if (Build.VERSION.SDK_INT >= 18) {
-      return new ViewOverlayApi18(view);
-    }
-    return ViewOverlayApi14.createFrom(view);
+    return new ViewOverlayApi18(view);
   }
 
   /** Returns the content view that is the parent of the provided view. */
@@ -428,21 +423,26 @@ public class ViewUtils {
 
   public static void removeOnGlobalLayoutListener(
       @NonNull ViewTreeObserver viewTreeObserver, @NonNull OnGlobalLayoutListener victim) {
-    if (VERSION.SDK_INT >= VERSION_CODES.JELLY_BEAN) {
-      viewTreeObserver.removeOnGlobalLayoutListener(victim);
-    } else {
-      viewTreeObserver.removeGlobalOnLayoutListener(victim);
-    }
+    viewTreeObserver.removeOnGlobalLayoutListener(victim);
   }
 
   /**
-   * Returns the provided view's background color, if it has ColorDrawable as its background, or
-   * {@code null} if the background has a different drawable type.
+   * Returns the color if it can be retrieved from the {@code view}'s background drawable, or null
+   * otherwise.
+   *
+   * <p>In particular:
+   *
+   * <ul>
+   *   <li>If the {@code view}'s background drawable is a {@link ColorDrawable}, the method will
+   *       return the drawable's color.
+   *   <li>If the {@code view}'s background drawable is a {@link ColorStateListDrawable}, the method
+   *       will return the default color of the drawable's {@link ColorStateList}.
+   * </ul>
    */
   @Nullable
   public static Integer getBackgroundColor(@NonNull View view) {
-    return view.getBackground() instanceof ColorDrawable
-        ? ((ColorDrawable) view.getBackground()).getColor()
-        : null;
+    final ColorStateList backgroundColorStateList =
+        DrawableUtils.getColorStateListOrNull(view.getBackground());
+    return backgroundColorStateList != null ? backgroundColorStateList.getDefaultColor() : null;
   }
 }

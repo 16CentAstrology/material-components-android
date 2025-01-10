@@ -24,7 +24,6 @@ import android.content.Context;
 import android.content.res.ColorStateList;
 import android.content.res.TypedArray;
 import android.graphics.Color;
-import android.graphics.drawable.ColorDrawable;
 import android.os.Build;
 import android.os.Build.VERSION;
 import android.os.Build.VERSION_CODES;
@@ -50,6 +49,7 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat;
 import com.google.android.material.internal.EdgeToEdgeUtils;
+import com.google.android.material.internal.ViewUtils;
 import com.google.android.material.motion.MaterialBackOrchestrator;
 import com.google.android.material.shape.MaterialShapeDrawable;
 
@@ -90,12 +90,7 @@ public class BottomSheetDialog extends AppCompatDialog {
 
   public BottomSheetDialog(@NonNull Context context) {
     this(context, 0);
-
-    edgeToEdgeEnabled =
-        getContext()
-            .getTheme()
-            .obtainStyledAttributes(new int[] {R.attr.enableEdgeToEdge})
-            .getBoolean(0, false);
+    initialize();
   }
 
   public BottomSheetDialog(@NonNull Context context, @StyleRes int theme) {
@@ -103,12 +98,7 @@ public class BottomSheetDialog extends AppCompatDialog {
     // We hide the title bar for any style configuration. Otherwise, there will be a gap
     // above the bottom sheet when it is expanded.
     supportRequestWindowFeature(Window.FEATURE_NO_TITLE);
-
-    edgeToEdgeEnabled =
-        getContext()
-            .getTheme()
-            .obtainStyledAttributes(new int[] {R.attr.enableEdgeToEdge})
-            .getBoolean(0, false);
+    initialize();
   }
 
   protected BottomSheetDialog(
@@ -116,12 +106,17 @@ public class BottomSheetDialog extends AppCompatDialog {
     super(context, cancelable, cancelListener);
     supportRequestWindowFeature(Window.FEATURE_NO_TITLE);
     this.cancelable = cancelable;
+    initialize();
+  }
 
-    edgeToEdgeEnabled =
-        getContext()
-            .getTheme()
-            .obtainStyledAttributes(new int[] {R.attr.enableEdgeToEdge})
-            .getBoolean(0, false);
+  private void initialize() {
+    final TypedArray a = getContext()
+        .getTheme()
+        .obtainStyledAttributes(new int[] {R.attr.enableEdgeToEdge});
+
+    edgeToEdgeEnabled = a.getBoolean(0, false);
+
+    a.recycle();
   }
 
   @Override
@@ -134,17 +129,15 @@ public class BottomSheetDialog extends AppCompatDialog {
     super.onCreate(savedInstanceState);
     Window window = getWindow();
     if (window != null) {
-      if (VERSION.SDK_INT >= VERSION_CODES.LOLLIPOP) {
-        // The status bar should always be transparent because of the window animation.
-        window.setStatusBarColor(0);
+      // The status bar should always be transparent because of the window animation.
+      window.setStatusBarColor(0);
 
-        window.addFlags(LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-        if (VERSION.SDK_INT < VERSION_CODES.M) {
-          // It can be transparent for API 23 and above because we will handle switching the status
-          // bar icons to light or dark as appropriate. For API 21 and API 22 we just set the
-          // translucent status bar.
-          window.addFlags(LayoutParams.FLAG_TRANSLUCENT_STATUS);
-        }
+      window.addFlags(LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+      if (VERSION.SDK_INT < VERSION_CODES.M) {
+        // It can be transparent for API 23 and above because we will handle switching the status
+        // bar icons to light or dark as appropriate. For API 21 and API 22 we just set the
+        // translucent status bar.
+        window.addFlags(LayoutParams.FLAG_TRANSLUCENT_STATUS);
       }
       window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
     }
@@ -187,18 +180,17 @@ public class BottomSheetDialog extends AppCompatDialog {
     super.onAttachedToWindow();
     Window window = getWindow();
     if (window != null) {
-      if (VERSION.SDK_INT >= VERSION_CODES.LOLLIPOP) {
-        // If the navigation bar is transparent at all the BottomSheet should be edge to edge.
-        boolean drawEdgeToEdge =
-            edgeToEdgeEnabled && Color.alpha(window.getNavigationBarColor()) < 255;
-        if (container != null) {
-          container.setFitsSystemWindows(!drawEdgeToEdge);
-        }
-        if (coordinator != null) {
-          coordinator.setFitsSystemWindows(!drawEdgeToEdge);
-        }
-        WindowCompat.setDecorFitsSystemWindows(window, !drawEdgeToEdge);
+      // If the navigation bar is transparent at all the BottomSheet should be edge to edge.
+      boolean drawEdgeToEdge =
+          edgeToEdgeEnabled && Color.alpha(window.getNavigationBarColor()) < 255;
+      if (container != null) {
+        container.setFitsSystemWindows(!drawEdgeToEdge);
       }
+      if (coordinator != null) {
+        coordinator.setFitsSystemWindows(!drawEdgeToEdge);
+      }
+      WindowCompat.setDecorFitsSystemWindows(window, !drawEdgeToEdge);
+
       if (edgeToEdgeCallback != null) {
         edgeToEdgeCallback.setWindow(window);
       }
@@ -223,8 +215,8 @@ public class BottomSheetDialog extends AppCompatDialog {
    * or calling `dismiss()` from a `BottomSheetDialogFragment`, tapping outside a dialog, etc...
    *
    * <p>The default animation to dismiss this dialog is a fade-out transition through a
-   * windowAnimation. Call {@link #setDismissWithAnimation(true)} if you want to utilize the
-   * BottomSheet animation instead.
+   * windowAnimation. Call {@link #setDismissWithAnimation(boolean)} with `true`
+   * if you want to utilize the BottomSheet animation instead.
    *
    * <p>If this function is called from a swipe down interaction, or dismissWithAnimation is false,
    * then keep the default behavior.
@@ -467,12 +459,15 @@ public class BottomSheetDialog extends AppCompatDialog {
       if (backgroundTint != null) {
         // First check for a tint
         lightBottomSheet = isColorLight(backgroundTint.getDefaultColor());
-      } else if (bottomSheet.getBackground() instanceof ColorDrawable) {
-        // Then check for the background color
-        lightBottomSheet = isColorLight(((ColorDrawable) bottomSheet.getBackground()).getColor());
       } else {
-        // Otherwise don't change the status bar color
-        lightBottomSheet = null;
+        Integer backgroundColor = ViewUtils.getBackgroundColor(bottomSheet);
+        if (backgroundColor != null) {
+          // Then check for the background color
+          lightBottomSheet = isColorLight(backgroundColor);
+        } else {
+          // Otherwise don't change the status bar color
+          lightBottomSheet = null;
+        }
       }
     }
 

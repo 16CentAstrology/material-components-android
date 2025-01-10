@@ -31,7 +31,7 @@ import android.widget.ToggleButton;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.google.android.material.appbar.AppBarLayout;
-import com.google.android.material.shape.MaterialShapeDrawable;
+import com.google.android.material.color.MaterialColors;
 import com.google.android.material.tabs.TabLayout;
 import io.material.catalog.feature.DemoFragment;
 import io.material.catalog.feature.DemoUtils;
@@ -59,14 +59,23 @@ public class TopAppBarCompressEffectFragment extends DemoFragment {
     activity.setSupportActionBar(toolbar);
 
     AppBarLayout appBarLayout = view.findViewById(R.id.appbarlayout);
-    appBarLayout.setStatusBarForeground(
-        MaterialShapeDrawable.createWithElevationOverlay(requireContext()));
+    appBarLayout.setStatusBarForegroundColor(
+        MaterialColors.getColor(appBarLayout, R.attr.colorSurface));
 
     TabLayout tabs = view.findViewById(R.id.tabs);
     ToggleButton showHideTabsButton = view.findViewById(R.id.show_hide_tabs_button);
     updateTabVisibility(tabs, showHideTabsButton.isChecked());
     showHideTabsButton.setOnCheckedChangeListener(
         (buttonView, isChecked) -> updateTabVisibility(tabs, isChecked));
+
+    ToggleButton showHideToolbarButton = view.findViewById(R.id.show_hide_toolbar_button);
+    showHideToolbarButton.setOnCheckedChangeListener((buttonView, isChecked) -> {
+      if (isChecked) {
+        activity.getSupportActionBar().show();
+      } else {
+        activity.getSupportActionBar().hide();
+      }
+    });
 
     return view;
   }

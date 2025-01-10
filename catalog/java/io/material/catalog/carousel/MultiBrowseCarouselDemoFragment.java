@@ -28,17 +28,17 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.google.android.material.carousel.CarouselLayoutManager;
 import com.google.android.material.carousel.CarouselSnapHelper;
-import com.google.android.material.carousel.MultiBrowseCarouselStrategy;
 import com.google.android.material.divider.MaterialDividerItemDecoration;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.slider.Slider;
-import com.google.android.material.slider.Slider.OnSliderTouchListener;
 import io.material.catalog.feature.DemoFragment;
 
 /** A fragment that displays the multi-browse variants of the Carousel. */
 public class MultiBrowseCarouselDemoFragment extends DemoFragment {
 
   private MaterialDividerItemDecoration horizontalDivider;
+  private CarouselAdapter adapter;
+  private Slider positionSlider;
 
   @NonNull
   @Override
@@ -60,11 +60,10 @@ public class MultiBrowseCarouselDemoFragment extends DemoFragment {
             requireContext(), MaterialDividerItemDecoration.HORIZONTAL);
 
     MaterialSwitch debugSwitch = view.findViewById(R.id.debug_switch);
-    MaterialSwitch forceCompactSwitch = view.findViewById(R.id.force_compact_arrangement_switch);
     MaterialSwitch drawDividers = view.findViewById(R.id.draw_dividers_switch);
     MaterialSwitch snapSwitch = view.findViewById(R.id.snap_switch);
     AutoCompleteTextView itemCountDropdown = view.findViewById(R.id.item_count_dropdown);
-    Slider positionSlider = view.findViewById(R.id.position_slider);
+    positionSlider = view.findViewById(R.id.position_slider);
 
     // A start-aligned multi-browse carousel
     RecyclerView multiBrowseStartRecyclerView =
@@ -82,11 +81,6 @@ public class MultiBrowseCarouselDemoFragment extends DemoFragment {
           multiBrowseStartCarouselLayoutManager.setDebuggingEnabled(
               multiBrowseStartRecyclerView, isChecked);
         });
-
-    forceCompactSwitch.setOnCheckedChangeListener(
-        (buttonView, isChecked) ->
-            multiBrowseStartCarouselLayoutManager.setCarouselStrategy(
-                new MultiBrowseCarouselStrategy(isChecked)));
 
     drawDividers.setOnCheckedChangeListener(
         (buttonView, isChecked) -> {
@@ -107,7 +101,7 @@ public class MultiBrowseCarouselDemoFragment extends DemoFragment {
           }
         });
 
-    CarouselAdapter adapter =
+    adapter =
         new CarouselAdapter(
             (item, position) -> {
               multiBrowseStartRecyclerView.scrollToPosition(position);
@@ -115,25 +109,7 @@ public class MultiBrowseCarouselDemoFragment extends DemoFragment {
             },
             R.layout.cat_carousel_item_narrow);
     multiBrowseStartRecyclerView.addOnScrollListener(
-        new RecyclerView.OnScrollListener() {
-          private boolean dragged = false;
-
-          @Override
-          public void onScrollStateChanged(@NonNull RecyclerView recyclerView, int newState) {
-            if (newState == RecyclerView.SCROLL_STATE_DRAGGING) {
-              dragged = true;
-            } else if (dragged && newState == RecyclerView.SCROLL_STATE_IDLE) {
-              if (recyclerView.computeHorizontalScrollRange() != 0) {
-                positionSlider.setValue(
-                    (adapter.getItemCount() - 1)
-                            * recyclerView.computeHorizontalScrollOffset()
-                            / recyclerView.computeHorizontalScrollRange()
-                        + 1);
-              }
-              dragged = false;
-            }
-          }
-        });
+        CarouselDemoUtils.createUpdateSliderOnScrollListener(positionSlider, adapter));
 
     itemCountDropdown.setOnItemClickListener(
         (parent, view1, position, id) -> {
@@ -143,17 +119,14 @@ public class MultiBrowseCarouselDemoFragment extends DemoFragment {
         });
 
     positionSlider.addOnSliderTouchListener(
-        new OnSliderTouchListener() {
-          @Override
-          public void onStartTrackingTouch(@NonNull Slider slider) {}
-
-          @Override
-          public void onStopTrackingTouch(@NonNull Slider slider) {
-            multiBrowseStartRecyclerView.smoothScrollToPosition(((int) slider.getValue()) - 1);
-          }
-        });
+        CarouselDemoUtils.createScrollToPositionSliderTouchListener(multiBrowseStartRecyclerView));
 
     multiBrowseStartRecyclerView.setAdapter(adapter);
+  }
+
+  @Override
+  public void onStart() {
+    super.onStart();
     adapter.submitList(CarouselData.createItems(), updateSliderRange(positionSlider, adapter));
   }
 
