@@ -73,7 +73,11 @@ import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Parcelable;
+import android.text.SpanWatcher;
+import android.text.Spannable;
+import android.text.SpannableString;
 import android.text.TextPaint;
+import android.text.style.TtsSpan;
 import android.util.SparseArray;
 import android.view.KeyEvent;
 import android.view.inputmethod.EditorInfo;
@@ -83,6 +87,7 @@ import android.widget.TextView;
 import androidx.annotation.ColorInt;
 import androidx.annotation.NonNull;
 import androidx.core.view.ViewCompat;
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat;
 import androidx.core.widget.TextViewCompat;
 import androidx.test.annotation.UiThreadTest;
 import androidx.test.espresso.ViewAssertion;
@@ -1105,6 +1110,79 @@ public class TextInputLayoutTest {
 
     assertThat(textInputLayout.getEndIconView().isFocusable()).isTrue();
     assertThat(textInputLayout.getEndIconView().isClickable()).isTrue();
+  }
+
+  @UiThreadTest
+  @Test
+  public void testAccessibilityNodeInfo_stripsSpanWatcher() {
+    TextInputLayout textInputLayout = activityTestRule.getActivity().findViewById(R.id.textinput);
+    EditText editText = textInputLayout.getEditText();
+
+    SpannableString inputWithSpan = new SpannableString(INPUT_TEXT);
+    SpanWatcher spanWatcher =
+        new SpanWatcher() {
+          @Override
+          public void onSpanAdded(Spannable text, Object what, int start, int end) {}
+
+          @Override
+          public void onSpanRemoved(Spannable text, Object what, int start, int end) {}
+
+          @Override
+          public void onSpanChanged(
+              Spannable text, Object what, int ostart, int oend, int nstart, int nend) {}
+        };
+    inputWithSpan.setSpan(spanWatcher, 0, INPUT_TEXT.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+    editText.setText(inputWithSpan);
+    textInputLayout.setHint(HINT_TEXT);
+
+    AccessibilityNodeInfoCompat accessibilityNodeInfo = AccessibilityNodeInfoCompat.obtain();
+    editText.onInitializeAccessibilityNodeInfo(accessibilityNodeInfo.unwrap());
+
+    CharSequence resultingText = accessibilityNodeInfo.getText();
+    Spannable stringSpan = new SpannableString(resultingText);
+    SpanWatcher[] preservedSpans =
+        stringSpan.getSpans(0, resultingText.length(), SpanWatcher.class);
+    assertThat(resultingText.toString()).isEqualTo(INPUT_TEXT + ", " + HINT_TEXT);
+    assertThat(preservedSpans).isEmpty();
+  }
+
+  @UiThreadTest
+  @Test
+  public void testAccessibilityNodeInfo_preservesTtsSpan() {
+    TextInputLayout textInputLayout = activityTestRule.getActivity().findViewById(R.id.textinput);
+    EditText editText = textInputLayout.getEditText();
+
+    SpannableString inputWithSpan = new SpannableString(INPUT_TEXT);
+    TtsSpan verbatimSpan = new TtsSpan.VerbatimBuilder(INPUT_TEXT).build();
+    SpanWatcher spanWatcher =
+        new SpanWatcher() {
+          @Override
+          public void onSpanAdded(Spannable text, Object what, int start, int end) {}
+
+          @Override
+          public void onSpanRemoved(Spannable text, Object what, int start, int end) {}
+
+          @Override
+          public void onSpanChanged(
+              Spannable text, Object what, int ostart, int oend, int nstart, int nend) {}
+        };
+    inputWithSpan.setSpan(verbatimSpan, 0, INPUT_TEXT.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+    inputWithSpan.setSpan(spanWatcher, 0, INPUT_TEXT.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+    editText.setText(inputWithSpan);
+    textInputLayout.setHint(HINT_TEXT);
+
+    AccessibilityNodeInfoCompat accessibilityNodeInfo = AccessibilityNodeInfoCompat.obtain();
+    editText.onInitializeAccessibilityNodeInfo(accessibilityNodeInfo.unwrap());
+
+    CharSequence resultingText = accessibilityNodeInfo.getText();
+    Spannable stringSpan = new SpannableString(resultingText);
+    TtsSpan[] preservedSpans = stringSpan.getSpans(0, INPUT_TEXT.length(), TtsSpan.class);
+    SpanWatcher[] preservedWatchers =
+        stringSpan.getSpans(0, resultingText.length(), SpanWatcher.class);
+    assertThat(resultingText.toString()).isEqualTo(INPUT_TEXT + ", " + HINT_TEXT);
+    assertThat(preservedSpans).hasLength(1);
+    assertThat(preservedSpans[0].getType()).isEqualTo(TtsSpan.TYPE_VERBATIM);
+    assertThat(preservedWatchers).isEmpty();
   }
 
   private static ViewAssertion isHintExpanded(final boolean expanded) {
