@@ -28,6 +28,8 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import android.text.TextUtils;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -45,6 +47,7 @@ import androidx.annotation.StringRes;
 import androidx.core.view.MenuItemCompat;
 import androidx.core.view.ViewCompat;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.resources.MaterialAttributes;
 import com.google.android.material.transition.platform.MaterialContainerTransformSharedElementCallback;
 import dagger.android.support.DaggerFragment;
 import java.util.ArrayList;
@@ -120,6 +123,16 @@ public abstract class DemoLandingFragment extends DaggerFragment {
     }
 
     descriptionTextView.setText(getDescriptionResId());
+
+    TypedValue typedValue =
+        MaterialAttributes.resolve(requireContext(), R.attr.catalogDemoLandingExtraText);
+    if (typedValue != null && !TextUtils.isEmpty(typedValue.string)) {
+      descriptionTextView.setText(
+          String.format(
+              "%s\n\n%s",
+              descriptionTextView.getText(), getResources().getString(typedValue.resourceId)));
+    }
+
     clearAndAddDemoViews(view, layoutInflater);
 
     DemoUtils.addBottomSpaceInsetsIfNeeded((ViewGroup) view, viewGroup);
