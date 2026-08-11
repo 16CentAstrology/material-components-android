@@ -38,6 +38,8 @@ import io.material.catalog.feature.DemoFragment;
 public class NavigationRailSubMenuDemoFragment extends DemoFragment {
 
   @Nullable NavigationRailView navigationRailView;
+  @Nullable ExtendedFloatingActionButton efab;
+  @Nullable ImageView button;
 
   @Override
   @NonNull
@@ -62,8 +64,7 @@ public class NavigationRailSubMenuDemoFragment extends DemoFragment {
             navigationRailView.getItemActiveIndicatorExpandedMarginHorizontal(),
             0);
 
-    ExtendedFloatingActionButton efab =
-        navigationRailView.getHeaderView().findViewById(R.id.cat_navigation_rail_efab);
+    efab = navigationRailView.getHeaderView().findViewById(R.id.cat_navigation_rail_efab);
     efab.setAnimationEnabled(false);
     efab.setExtended(false);
     efab.setOnClickListener(v ->
@@ -71,7 +72,7 @@ public class NavigationRailSubMenuDemoFragment extends DemoFragment {
           .show());
     TooltipCompat.setTooltipText(efab, efab.getContentDescription());
 
-    ImageView button =
+    button =
         navigationRailView.getHeaderView().findViewById(R.id.cat_navigation_rail_expand_button);
     String expandButtonContentDescription =
         getResources().getString(R.string.cat_navigation_rail_expand_button_description);
@@ -93,5 +94,20 @@ public class NavigationRailSubMenuDemoFragment extends DemoFragment {
           TooltipCompat.setTooltipText(button, button.getContentDescription());
         });
     return view;
+  }
+
+  @Override
+  public void onViewStateRestored(@Nullable Bundle savedInstanceState) {
+    super.onViewStateRestored(savedInstanceState);
+    if (navigationRailView != null
+        && navigationRailView.isExpanded()
+        && efab != null
+        && button != null) {
+      efab.extend();
+      button.setContentDescription(
+          getResources().getString(R.string.cat_navigation_rail_collapse_button_description));
+      button.setImageResource(R.drawable.ic_drawer_menu_open_24px);
+      TooltipCompat.setTooltipText(button, button.getContentDescription());
+    }
   }
 }
