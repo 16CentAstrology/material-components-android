@@ -51,6 +51,7 @@
       app:layout_constraintTop_toTopOf="parent" />
 
     <androidx.core.widget.NestedScrollView
+      android:id="@+id/coplanar_detached_side_sheet_scroll_view"
       android:layout_width="0dp"
       android:layout_height="wrap_content"
       app:layout_constraintEnd_toEndOf="parent"
