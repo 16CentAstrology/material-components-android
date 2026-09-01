@@ -25,6 +25,8 @@ import static org.mockito.Mockito.verify;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Parcel;
+import android.os.Parcelable;
 import androidx.appcompat.app.AppCompatActivity;
 import android.view.View;
 import android.widget.CheckBox;
@@ -223,6 +225,46 @@ public class MaterialCheckBoxTest {
 
     assertThat(materialCheckBox.getErrorAccessibilityLabel()).isNotNull();
     assertThat(materialCheckBox.getErrorAccessibilityLabel().toString()).isEqualTo("error");
+  }
+
+  @Test
+  public void testOnSaveAndRestoreInstanceState_checked_restoresCheckedState() {
+    assertSaveAndRestoreState(MaterialCheckBox.STATE_CHECKED);
+  }
+
+  @Test
+  public void testOnSaveAndRestoreInstanceState_unchecked_restoresCheckedState() {
+    assertSaveAndRestoreState(MaterialCheckBox.STATE_UNCHECKED);
+  }
+
+  @Test
+  public void testOnSaveAndRestoreInstanceState_indeterminate_restoresCheckedState() {
+    assertSaveAndRestoreState(MaterialCheckBox.STATE_INDETERMINATE);
+  }
+
+  private void assertSaveAndRestoreState(@MaterialCheckBox.CheckedState int expectedState) {
+    materialCheckBox.setCheckedState(expectedState);
+
+    Parcelable savedState = materialCheckBox.onSaveInstanceState();
+    Parcel parcel = Parcel.obtain();
+    try {
+      parcel.writeParcelable(savedState, 0);
+      parcel.setDataPosition(0);
+
+      MaterialCheckBox restoredCheckBox = new MaterialCheckBox(activity);
+      int opposingState =
+          expectedState == MaterialCheckBox.STATE_UNCHECKED
+              ? MaterialCheckBox.STATE_CHECKED
+              : MaterialCheckBox.STATE_UNCHECKED;
+      restoredCheckBox.setCheckedState(opposingState);
+
+      Parcelable unparceledState = parcel.readParcelable(MaterialCheckBox.class.getClassLoader());
+      restoredCheckBox.onRestoreInstanceState(unparceledState);
+
+      assertThat(restoredCheckBox.getCheckedState()).isEqualTo(expectedState);
+    } finally {
+      parcel.recycle();
+    }
   }
 
   @Test
