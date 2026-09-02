@@ -138,8 +138,8 @@ public class TocFragment extends DaggerFragment {
     Collator collator = Collator.getInstance();
     Comparator<FeatureDemo> comparator =
         (feature1, feature2) -> {
-          // First compare priorities, multiply by -1 so that true comes first.
-          int priorityCompare = Boolean.compare(feature1.isPriority(), feature2.isPriority()) * -1;
+          // Swap the parameters to sort in descending priority order
+          int priorityCompare = Boolean.compare(feature2.isPriority(), feature1.isPriority());
           if (priorityCompare != 0) {
             return priorityCompare;
           }
