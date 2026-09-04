@@ -15,6 +15,8 @@
  */
 package com.google.android.material.carousel;
 
+import com.google.android.material.test.R;
+
 import static com.google.android.material.carousel.CarouselHelper.assertChildrenHaveValidOrder;
 import static com.google.android.material.carousel.CarouselHelper.createDataSetWithSize;
 import static com.google.android.material.carousel.CarouselHelper.getKeylineMaskPercentage;
@@ -33,6 +35,8 @@ import static com.google.common.truth.Truth.assertThat;
 import android.content.Context;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.os.Parcel;
+import android.os.Parcelable;
 import androidx.recyclerview.widget.RecyclerView;
 import android.view.View;
 import androidx.annotation.NonNull;
@@ -765,6 +769,196 @@ public class CarouselLayoutManagerTest {
     assertThat(childCountAfter).isGreaterThan(childCountBefore);
     View addedView = layoutManager.getChildAt(0);
     assertThat(layoutManager.getPosition(addedView)).isEqualTo(position - 1);
+  }
+
+  @Test
+  public void testSaveAndRestoreInstanceState_preservesScrollPosition() throws Throwable {
+    KeylineState keylineState = getTestCenteredKeylineState();
+    setAdapterItems(recyclerView, layoutManager, adapter, createDataSetWithSize(40));
+    scrollToPosition(recyclerView, layoutManager, 20);
+
+    Parcelable savedState = layoutManager.onSaveInstanceState();
+
+    WrappedCarouselLayoutManager newLayoutManager =
+        CarouselHelper.createLayoutManagerWithStrategy(keylineState);
+    newLayoutManager.onRestoreInstanceState(savedState);
+    recyclerView.setLayoutManager(newLayoutManager);
+    setAdapterItems(recyclerView, newLayoutManager, adapter, createDataSetWithSize(40));
+
+    MaskableFrameLayout child =
+        (MaskableFrameLayout) recyclerView.findViewHolderForAdapterPosition(20).itemView;
+    float childCenterX = child.getLeft() + (child.getWidth() / 2F);
+    assertThat(childCenterX).isEqualTo(keylineState.getFirstFocalKeyline().locOffset);
+  }
+
+  @Test
+  public void testSaveAndRestoreInstanceState_vertical_preservesScrollPosition() throws Throwable {
+    KeylineState keylineState = getTestCenteredVerticalKeylineState();
+    layoutManager.setCarouselStrategy(CarouselHelper.createCarouselStrategy(keylineState));
+    setVerticalOrientation(recyclerView, layoutManager);
+    setAdapterItems(recyclerView, layoutManager, adapter, createDataSetWithSize(40));
+
+    scrollToPosition(recyclerView, layoutManager, 20);
+
+    Parcelable savedState = layoutManager.onSaveInstanceState();
+
+    WrappedCarouselLayoutManager newLayoutManager =
+        CarouselHelper.createLayoutManagerWithStrategy(keylineState);
+    newLayoutManager.setOrientation(CarouselLayoutManager.VERTICAL);
+    newLayoutManager.onRestoreInstanceState(savedState);
+    recyclerView.setLayoutManager(newLayoutManager);
+    setAdapterItems(recyclerView, newLayoutManager, adapter, createDataSetWithSize(40));
+
+    MaskableFrameLayout child =
+        (MaskableFrameLayout) recyclerView.findViewHolderForAdapterPosition(20).itemView;
+    float childCenterY = child.getTop() + (child.getHeight() / 2F);
+    assertThat(childCenterY).isEqualTo(keylineState.getFirstFocalKeyline().locOffset);
+  }
+
+  @Test
+  public void testSaveAndRestoreInstanceState_afterScrollBy_preservesScrollPosition()
+      throws Throwable {
+    KeylineState keylineState = getTestCenteredKeylineState();
+    setAdapterItems(recyclerView, layoutManager, adapter, createDataSetWithSize(40));
+
+    scrollHorizontallyBy(recyclerView, layoutManager, 1000);
+    int originalScrollOffset = layoutManager.scrollOffset;
+    int estimatedPosition = layoutManager.currentEstimatedPosition;
+    assertThat(originalScrollOffset).isGreaterThan(0);
+
+    Parcelable savedState = layoutManager.onSaveInstanceState();
+
+    WrappedCarouselLayoutManager newLayoutManager =
+        CarouselHelper.createLayoutManagerWithStrategy(keylineState);
+    newLayoutManager.onRestoreInstanceState(savedState);
+    recyclerView.setLayoutManager(newLayoutManager);
+    setAdapterItems(recyclerView, newLayoutManager, adapter, createDataSetWithSize(40));
+
+    assertThat(newLayoutManager.scrollOffset).isEqualTo(originalScrollOffset);
+    assertThat(newLayoutManager.currentEstimatedPosition).isEqualTo(estimatedPosition);
+  }
+
+  @Test
+  public void testSaveAndRestoreInstanceState_unscrolled_preservesStartScroll() throws Throwable {
+    setAdapterItems(recyclerView, layoutManager, adapter, createDataSetWithSize(10));
+    Parcelable savedState = layoutManager.onSaveInstanceState();
+
+    WrappedCarouselLayoutManager newLayoutManager =
+        CarouselHelper.createLayoutManagerWithStrategy(getTestCenteredKeylineState());
+    newLayoutManager.onRestoreInstanceState(savedState);
+    recyclerView.setLayoutManager(newLayoutManager);
+    setAdapterItems(recyclerView, newLayoutManager, adapter, createDataSetWithSize(10));
+
+    assertThat(newLayoutManager.scrollOffset).isEqualTo(newLayoutManager.minScroll);
+  }
+
+  @Test
+  public void testSaveAndRestoreInstanceState_withReducedItemCount_clampsSafely() throws Throwable {
+    KeylineState keylineState = getTestCenteredKeylineState();
+    setAdapterItems(recyclerView, layoutManager, adapter, createDataSetWithSize(40));
+    scrollToPosition(recyclerView, layoutManager, 35);
+
+    Parcelable savedState = layoutManager.onSaveInstanceState();
+
+    WrappedCarouselLayoutManager newLayoutManager =
+        CarouselHelper.createLayoutManagerWithStrategy(keylineState);
+    newLayoutManager.onRestoreInstanceState(savedState);
+    recyclerView.setLayoutManager(newLayoutManager);
+    // Restore with fewer items than the target position
+    setAdapterItems(recyclerView, newLayoutManager, adapter, createDataSetWithSize(5));
+
+    assertThat(newLayoutManager.scrollOffset).isEqualTo(newLayoutManager.maxScroll);
+    assertThat(recyclerView.getChildCount()).isGreaterThan(0);
+  }
+
+  @Test
+  public void testSavedState_parcelling() {
+    CarouselLayoutManager.SavedState savedState = new CarouselLayoutManager.SavedState(15, 250);
+    Parcel parcel = Parcel.obtain();
+    savedState.writeToParcel(parcel, 0);
+    parcel.setDataPosition(0);
+
+    CarouselLayoutManager.SavedState restoredState =
+        CarouselLayoutManager.SavedState.CREATOR.createFromParcel(parcel);
+    parcel.recycle();
+
+    assertThat(restoredState.targetPosition).isEqualTo(15);
+    assertThat(restoredState.scrollOffset).isEqualTo(250);
+  }
+
+  @Test
+  public void testSaveAndRestoreInstanceState_multipleLayoutPasses_preservesScrollOffset()
+      throws Throwable {
+    KeylineState keylineState = getTestCenteredKeylineState();
+    setAdapterItems(recyclerView, layoutManager, adapter, createDataSetWithSize(40));
+    scrollToPosition(recyclerView, layoutManager, 15);
+
+    int restoredOffset = layoutManager.scrollOffset;
+    Parcelable savedState = layoutManager.onSaveInstanceState();
+
+    WrappedCarouselLayoutManager newLayoutManager =
+        CarouselHelper.createLayoutManagerWithStrategy(keylineState);
+    newLayoutManager.onRestoreInstanceState(savedState);
+    recyclerView.setLayoutManager(newLayoutManager);
+    setAdapterItems(recyclerView, newLayoutManager, adapter, createDataSetWithSize(40));
+
+    // Perform a second layout pass to ensure isInitialLoad was set to false on restore
+    newLayoutManager.expectLayouts(1);
+    recyclerView.requestLayout();
+    recyclerView.measure(
+        View.MeasureSpec.makeMeasureSpec(recyclerView.getMeasuredWidth(), View.MeasureSpec.EXACTLY),
+        View.MeasureSpec.makeMeasureSpec(
+            recyclerView.getMeasuredHeight(), View.MeasureSpec.EXACTLY));
+    recyclerView.layout(0, 0, recyclerView.getMeasuredWidth(), recyclerView.getMeasuredHeight());
+    newLayoutManager.waitForLayout(3L);
+
+    assertThat(newLayoutManager.scrollOffset).isEqualTo(restoredOffset);
+  }
+
+  @Test
+  public void testRefreshKeylineState_afterScrollBy_preservesExactScrollOffset() throws Throwable {
+    setAdapterItems(recyclerView, layoutManager, adapter, createDataSetWithSize(40));
+    scrollHorizontallyBy(recyclerView, layoutManager, 550);
+
+    int originalOffset = layoutManager.scrollOffset;
+
+    layoutManager.refreshKeylineState();
+    layoutManager.expectLayouts(1);
+    recyclerView.requestLayout();
+    recyclerView.measure(
+        View.MeasureSpec.makeMeasureSpec(recyclerView.getMeasuredWidth(), View.MeasureSpec.EXACTLY),
+        View.MeasureSpec.makeMeasureSpec(
+            recyclerView.getMeasuredHeight(), View.MeasureSpec.EXACTLY));
+    recyclerView.layout(0, 0, recyclerView.getMeasuredWidth(), recyclerView.getMeasuredHeight());
+    layoutManager.waitForLayout(3L);
+
+    assertThat(layoutManager.scrollOffset).isEqualTo(originalOffset);
+  }
+
+  @Test
+  public void testScrollToPosition_afterRestore_overridesPendingState() throws Throwable {
+    setAdapterItems(recyclerView, layoutManager, adapter, createDataSetWithSize(40));
+    scrollToPosition(recyclerView, layoutManager, 30);
+
+    Parcelable savedState = layoutManager.onSaveInstanceState();
+
+    WrappedCarouselLayoutManager newLayoutManager =
+        CarouselHelper.createLayoutManagerWithStrategy(getTestCenteredKeylineState());
+    newLayoutManager.onRestoreInstanceState(savedState);
+
+    // Override restored pending state with explicit scrollToPosition before layout
+    newLayoutManager.scrollToPosition(5);
+    recyclerView.setLayoutManager(newLayoutManager);
+    setAdapterItems(recyclerView, newLayoutManager, adapter, createDataSetWithSize(40));
+
+    assertThat(recyclerView.findViewHolderForAdapterPosition(5)).isNotNull();
+  }
+
+  @Test
+  public void testSaveInstanceState_beforeInitialLayout_returnsValidState() {
+    WrappedCarouselLayoutManager unlaidOutManager = new WrappedCarouselLayoutManager();
+    Parcelable state = unlaidOutManager.onSaveInstanceState();
+    assertThat(state).isNotNull();
   }
 
   /**

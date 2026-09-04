@@ -52,15 +52,11 @@ class CarouselHelper {
       int currentAdapterPosition = layoutManager.getPosition(layoutManager.getChildAt(i));
       int nextAdapterPosition = layoutManager.getPosition(layoutManager.getChildAt(i + 1));
       assertWithMessage(
-          "Child at index "
-              + i
-              + " had a greater adapter position ["
-              + currentAdapterPosition
-              + "] than child at index "
-              + (i + 1)
-              + " ["
-              + nextAdapterPosition
-              + "]")
+          "Child at index %s had a greater adapter position [%s] than child at index %s [%s]",
+          i,
+          currentAdapterPosition,
+          i + 1,
+          nextAdapterPosition)
           .that(currentAdapterPosition)
           .isLessThan(nextAdapterPosition);
     }
@@ -496,5 +492,24 @@ class CarouselHelper {
         MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
         MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY));
     return view;
+  }
+
+  @NonNull
+  static CarouselStrategy createCarouselStrategy(@NonNull KeylineState keylineState) {
+    return new CarouselStrategy() {
+      @Override
+      public KeylineState onFirstChildMeasuredWithMargins(
+          @NonNull Carousel carousel, @NonNull View child) {
+        return keylineState;
+      }
+    };
+  }
+
+  @NonNull
+  static WrappedCarouselLayoutManager createLayoutManagerWithStrategy(
+      @NonNull KeylineState keylineState) {
+    WrappedCarouselLayoutManager newLayoutManager = new WrappedCarouselLayoutManager();
+    newLayoutManager.setCarouselStrategy(createCarouselStrategy(keylineState));
+    return newLayoutManager;
   }
 }
